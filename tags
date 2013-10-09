@@ -1,0 +1,66 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+Boolean	flash.h	/^typedef int Boolean;$/;"	t
+FALSE	flash.h	40;"	d
+FLASH_ASYNC	flash.h	133;"	d
+FLASH_BLOCK_SIZE	flash.h	71;"	d
+FLASH_ERASE	flash.c	22;"	d	file:
+FLASH_READ	flash.c	20;"	d	file:
+FLASH_SECTORS_PER_BLOCK	flash.h	51;"	d
+FLASH_SECTOR_SIZE	flash.h	61;"	d
+FLASH_SILENT	flash.h	132;"	d
+FLASH_STATE_EMPTY	flash.c	48;"	d	file:
+FLASH_STATE_FULL	flash.c	49;"	d	file:
+FLASH_WRITE	flash.c	21;"	d	file:
+FUSE_USE_VERSION	hello.c	11;"	d	file:
+Flash	flash.h	/^typedef void *Flash;$/;"	t
+FlashGetState	flash.c	/^FlashGetState($/;"	f
+FlashHeader	flash.c	/^typedef struct FlashHeader {$/;"	s	file:
+FlashHeader	flash.c	/^} FlashHeader;$/;"	t	typeref:struct:FlashHeader	file:
+FlashIO	flash.c	/^FlashIO($/;"	f	file:
+FlashInfo	flash.c	/^typedef struct FlashInfo {$/;"	s	file:
+FlashInfo	flash.c	/^} FlashInfo;$/;"	t	typeref:struct:FlashInfo	file:
+FlashSetState	flash.c	/^FlashSetState($/;"	f
+FlashSetWear	flash.c	/^FlashSetWear($/;"	f
+Flash_Close	flash.c	/^Flash_Close($/;"	f
+Flash_Create	flash.c	/^Flash_Create($/;"	f
+Flash_Erase	flash.c	/^Flash_Erase($/;"	f
+Flash_Flags	flash.h	/^typedef u_int Flash_Flags;$/;"	t
+Flash_GetWear	flash.c	/^Flash_GetWear($/;"	f
+Flash_Open	flash.c	/^Flash_Open($/;"	f
+Flash_Read	flash.c	/^Flash_Read($/;"	f
+Flash_Write	flash.c	/^Flash_Write($/;"	f
+NARGS	hello.c	122;"	d	file:
+TRUE	flash.h	36;"	d
+_FLASH_H	flash.h	17;"	d
+assume	flash.c	12;"	d	file:
+blockOffset	flash.c	/^    u_int       blockOffset;      \/\/ Offset of data blocks, in bytes.$/;"	m	struct:FlashHeader	file:
+blocks	flash.c	/^    u_int       blocks;$/;"	m	struct:FlashHeader	file:
+eraseBlocks	flash.c	/^    long long   eraseBlocks;$/;"	m	struct:FlashInfo	file:
+eraseOps	flash.c	/^    long long   eraseOps;$/;"	m	struct:FlashInfo	file:
+fd	flash.c	/^    int		fd;$/;"	m	struct:FlashInfo	file:
+file	flash.c	/^    char	*file;$/;"	m	struct:FlashInfo	file:
+flags	flash.c	/^    Flash_Flags	flags;$/;"	m	struct:FlashInfo	file:
+hdr	flash.c	/^    FlashHeader hdr;$/;"	m	struct:FlashInfo	file:
+hello_getattr	hello.c	/^static int hello_getattr(const char *path, struct stat *stbuf)$/;"	f	file:
+hello_open	hello.c	/^static int hello_open(const char *path, struct fuse_file_info *fi)$/;"	f	file:
+hello_oper	hello.c	/^static struct fuse_operations hello_oper = {$/;"	v	typeref:struct:fuse_operations	file:
+hello_path	hello.c	/^static const char *hello_path = "\/hello";$/;"	v	file:
+hello_read	hello.c	/^static int hello_read(const char *path, char *buf, size_t size, off_t offset,$/;"	f	file:
+hello_readdir	hello.c	/^static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler,$/;"	f	file:
+hello_readlink	hello.c	/^static int hello_readlink(const char *path, char *buf, size_t size)$/;"	f	file:
+hello_str	hello.c	/^static const char *hello_str = "Hello World!\\n";$/;"	v	file:
+link_path	hello.c	/^static const char *link_path = "\/link";$/;"	v	file:
+magic	flash.c	/^    char        magic[8];          \/\/ "FLASH"$/;"	m	struct:FlashHeader	file:
+main	hello.c	/^int main(int argc, char *argv[])$/;"	f
+readOps	flash.c	/^    long long	readOps;$/;"	m	struct:FlashInfo	file:
+readSectors	flash.c	/^    long long	readSectors;$/;"	m	struct:FlashInfo	file:
+stateOffset	flash.c	/^    u_int       stateOffset;      \/\/ Offset of sector state array, in bytes.$/;"	m	struct:FlashHeader	file:
+wearLimit	flash.c	/^    u_int       wearLimit;$/;"	m	struct:FlashHeader	file:
+wearOffset	flash.c	/^    u_int       wearOffset;       \/\/ Offset of wear level array, in bytes.$/;"	m	struct:FlashHeader	file:
+writeOps	flash.c	/^    long long	writeOps;$/;"	m	struct:FlashInfo	file:
+writeSectors	flash.c	/^    long long	writeSectors;$/;"	m	struct:FlashInfo	file:
