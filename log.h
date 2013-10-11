@@ -55,12 +55,12 @@ typedef struct Seg_usage_table
 
 
 //store metadata
-struct Checkpoint_region
+typedef struct Checkpoint_region
 {
     //???address of all blocks in lfs or flash memory
 
 
-}
+}Checkpoint;
 
 //contains direct block info
 //seg_no: which seg this block it belongs to
@@ -130,6 +130,14 @@ struct log_beginning
     seg_usage_table[SEG_NUM] seg_usage_table;
     Inode_map Inode_map;
     //???anything else
+    //???anything else
+    /* 
+     * edited 1 weng 
+     * checkpoint
+     * Flash
+     */
+     Checkpoint checkpoint;
+     Flash *flash;
 }
 
 
