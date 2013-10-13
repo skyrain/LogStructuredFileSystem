@@ -14,10 +14,16 @@
  * length is the length of the I/O in bytes.
  */
 
-int File_Init(inode *inode, int type);
+//temp fun
+//int Log_Init(char *filename, Inode **ifile, int *closestatus);
 
-int File_Write(inode *inode, int offset, int length, void *buffer);
+int File_Init(Inode *inode, int type);
 
-int File_Read(inode *inode, int offset, int length, void *buffer);
+int File_Write(Inode *inode, int offset, int length, void *buffer);
 
-int File_Free(inode *inode);
+int File_Read(Inode *inode, int offset, int length, void *buffer);
+
+int File_Free(Inode *inode);
+
+int File_Layer_Init(char *filename, Inode **ifile, int *closestatus);
+
