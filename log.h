@@ -6,10 +6,10 @@
 #include <time.h>
 #include <sys/types.h>
 
-#define BLOCKS_PER_SEG 32
 #define BLOCK_SIZE FLASH_BLOCK_SIZE
 #define SEG_SIZE (BLOCKS_PER_SEG * BLOCK_SIZE)
 #define DIRECT_BK_NUM 4
+#define FILE_NAME_LENGTH 8
 //#define N_BEGIN_BLOCK 2
 
 typedef struct Block
@@ -68,28 +68,31 @@ typedef struct Checkpoint_region
 //contains direct block info
 //seg_no: which seg this block it belongs to
 //bk_no: what block_no in the seg
-typedef struct Direct_bk
+typedef struct Block_pointer
 {
     u_int seg_no;
     u_int bk_no;
-}Direct_bk;
+}Block_pointer;
 
-typedef struct Bk_list
-{
-    Direct_bk bk;
-    struct Bk_list* next;
-}Bk_list;
+//this structure doesnt need
+//typedef struct Bk_list
+//{
+//    Direct_bk bk;
+//    struct Bk_list* next;
+//}Bk_list;
 
 typedef struct Inode
 {
-    u_int  ino;
+    u_int ino;
     u_int seg_no_in_log;//this inode is stored in which seg of log
     u_int bk_no_in_log;//this inode is stored in which block of log
     u_int filetype;
     u_int filesize;
+    char filename[FILE_NAME_LENGTH+1]; //phase 1
     //flash address of the inode's blocks
-    Direct_bk direct_bk[DIRECT_BK_NUM];
-    Bk_list indirect_bk;
+    Block_pointer direct_bk[DIRECT_BK_NUM];
+    //Bk_list indirect_bk;
+    //Block_pointer indirect_bk;  phase 2
     int mode;
     uid_t userID;
     gid_t groupID;

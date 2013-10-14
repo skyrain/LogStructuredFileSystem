@@ -27,3 +27,4 @@ int File_Free(Inode *inode);
 
 int File_Layer_Init(char *filename, Inode **ifile, int *closestatus);
 
+void Get_Block(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);
