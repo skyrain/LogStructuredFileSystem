@@ -226,8 +226,10 @@ int	Flash_Erase(Flash flash, u_int block, u_int count);
  *************************************************************************
  */
 
-int	Flash_Erase(Flash flash, u_int offset, u_int count);
+//int	Flash_Erase(Flash flash, u_int offset, u_int count);
 
+
+int Flash_GetWear(Flash flashHandle, int block, u_int *wear);
 /*
  *************************************************************************
  * int

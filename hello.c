@@ -112,6 +112,7 @@ static struct fuse_operations hello_oper = {
     .readlink   = hello_readlink,
 };
 
+/*
 int main(int argc, char *argv[])
 {
     char 	**nargv = NULL;
@@ -132,3 +133,4 @@ int main(int argc, char *argv[])
     }
     return fuse_main(nargc, nargv, &hello_oper, NULL);
 }
+*/
