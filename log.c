@@ -38,6 +38,7 @@ int Log_Create(
     //1.1 create super log seg 
     u_int * s_log_seg_mem = (u_int *)malloc(log_seg_size);
     Super_log_seg * s_log_seg = (Super_log_seg *)s_log_seg_mem;
+    s_log_seg->log_seg_no = 0;
     s_log_seg->seg_size = log_seg_size;
     s_log_seg->bk_size = secs_per_bk * FLASH_SECTOR_SIZE;
     s_log_seg->fl_seg_num = total_sec / secs_per_bk / bks_per_seg;
@@ -74,6 +75,7 @@ int Log_Create(
         //create new log seg
         u_int * tmp_log_seg = (u_int *)malloc(log_seg_size);
         Seg * log_seg = (Seg *)tmp_log_seg;
+
         log_seg->
 //.............
 

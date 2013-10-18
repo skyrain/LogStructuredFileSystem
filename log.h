@@ -47,6 +47,7 @@ typedef struct Begin_bk
 //log segment definition
 typedef struct Seg
 {
+    u_int log_seg_no;
     Begin_bk begin_block;
     Block * blocks;
 }Seg;
@@ -159,7 +160,7 @@ typedef struct LogAddress
 //super log segment 存整个log的信息和checkpoint等
 typedef struct Super_log_seg
 {
-
+    u_int log_seg_no;
     u_int seg_size;
     u_int bk_size;
     u_int fl_seg_num;                     //整个flash memory大小
