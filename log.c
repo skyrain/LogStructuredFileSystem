@@ -6,7 +6,7 @@
 
 /*
  *
- *
+ *?? means not for sure or need improve in future
  *
  *
  **********/
@@ -20,7 +20,7 @@ int Log_Create(
     u_int wearLimit,
     u_int total_sec,
     u_int secs_per_bk,
-    u_int bks_per_seg
+    u_int bks_per_seg,
     u_int segs_per_log
         )
 {
@@ -69,20 +69,99 @@ int Log_Create(
     Flash_Write(flash, 0, secs_per_bk * bks_per_seg, s_log_seg);    
     
     //2.create other log seg in memory, and attached to super log seg
+    Seg * data_start_seg;
     u_int i;
-    for(i = 0; i < s_log_seg->log_seg_num; i++)
+    for(i = 1; i < s_log_seg->log_seg_num; i++)
     {
-        //create new log seg
-        u_int * tmp_log_seg = (u_int *)malloc(log_seg_size);
-        Seg * log_seg = (Seg *)tmp_log_seg;
+        u_int j;
+        Seg * log_seg = (Seg *)malloc(sizeof(Seg));
+        //--------------------------start new log seg creation-------------
+        //1.create new log seg
+        log_seg->log_seg_no = i;
 
-        log_seg->
-//.............
+        //-------------------------------------------------------
+        //1.1 create new log seg's Begin bk
+        //for Seg_sum_bk's info
 
+        Seg_sum_entry * entry = (Seg_sum_entry *)malloc(sizeof(Seg_sum_entry)); 
+        entry->log_bk_no = 1; 
+        entry->file_no = -1;
+        entry->file_bk_no = -1;
+        entry->next = NULL;
 
-        s_log_seg->next = log_seg;
+        Seg_sum_entry * start_entry = entry;
+        
+        for(j = 2; j < bks_per_seg; j++)
+        {
+            Seg_sum_entry * tmp_entry = (Seg_sum_entry *)malloc(sizeof(Seg_sum_entry)); 
+            tmp_entry->log_bk_no = j; 
+            tmp_entry->file_no = -1;
+            tmp_entry->file_bk_no = -1;
+            tmp_entry->next = NULL;
 
+            while(entry->next != NULL)
+                entry = entry->next;
 
+            entry->next = tmp_entry;
+        }
+        
+
+        Seg_sum_bk * seg_sum_bk = (Seg_sum_bk *)malloc(sizeof(Seg_sum_bk));
+ //seg_sum_bk 在 1th block       
+        seg_sum_bk->log_bk_no = 1;
+        seg_sum_bk->seg_sum_entry = start_entry;
+
+        Begin_bk * begin_bk = (Begin_bk *)malloc(sizeof(Begin_bk));
+//??suppose begin_bk only has 1 seg_sum_bk 
+        begin_bk->log_bk_no = start_entry->log_bk_no;
+        begin_bk->ssum_bk = *(seg_sum_bk); 
+        
+        log_seg->begin_bk = *(begin_bk);        
+
+        //----------------------------------------------------------
+        //2.create the blocks for the seg
+        Block * start_bk = (Block *)malloc(sizeof(Block));
+        start_bk->bk_no = 1;
+        void * start_bk_content = malloc(secs_per_bk * FLASH_SECTOR_SIZE);
+        start_bk->bk_content = start_bk_content;
+        start_bk->next = NULL;
+
+        Block * copy_start_bk = start_bk;
+        for(j = 2; j < bks_per_seg; j++)
+        {
+            Block * tmp_bk = (Block *)malloc(sizeof(Block));
+            tmp_bk->bk_no = j;
+            void * tmp_bk_content = malloc(secs_per_bk * FLASH_SECTOR_SIZE);
+            tmp_bk->bk_content = tmp_bk_content;
+            tmp_bk->next = NULL;
+            
+            while(start_bk->next != NULL)
+                start_bk = start_bk->next;
+
+            start_bk->next = tmp_bk;
+        } 
+
+        log_seg->bk = copy_start_bk;
+
+        log_seg->next = NULL;
+        //----------------finish log seg creation-----------------------------
+        //-------------------------------------------------------------------
+
+        //--------------attach new log seg to the end-------------------
+        
+        if(i == 1)
+        {
+             data_start_seg = log_seg;
+             s_log_seg->next = log_seg;
+
+        }
+        else
+        {
+            while(data_start_seg->next != NULL)
+                data_start_seg = data_start_seg->next;
+
+            data_start_seg->next = log_seg;
+        }
     }
     
 

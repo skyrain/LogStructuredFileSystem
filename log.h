@@ -12,8 +12,10 @@
 
 typedef struct Block
 {
-    u_int block_no;
+    u_int bk_no;
     void *bk_content;   //存file data 
+    struct Block * next;
+
 }Block;
 
 //list "log_bk_no"th block in certain log seg
@@ -24,12 +26,15 @@ typedef struct Seg_sum_entry
     u_int file_no;            
     u_int file_bk_no;
 
+    struct Seg_sum_entry * next;
+
 }Seg_sum_entry;
 
 //每个log seg有bks_per_seg个log blocks
 typedef struct Seg_sum_bk
 {
-    u_int log_bk_no;        //该Seg_sum_bk存在log seg的哪一个block里面
+    //该Seg_sum_bk存在log seg的哪一个block里面
+    u_int log_bk_no;        
     Seg_sum_entry * seg_sum_entry;
 
     //之后加入uid用于判断一个log seg的某个block是否alive
@@ -41,15 +46,19 @@ typedef struct Seg_sum_bk
 typedef struct Begin_bk
 {
     u_int log_bk_no;        //Begin block在log seg的哪一个block里面
-    Seg_sum_bk begin_block; 
+    
+    //Note: Seg_sum_bk starts at the 2nd bk of seg
+    Seg_sum_bk ssum_bk; 
 }Begin_bk;
 
 //log segment definition
 typedef struct Seg
 {
     u_int log_seg_no;
-    Begin_bk begin_block;
-    Block * blocks;
+    Begin_bk begin_bk;
+    Block * bk;
+    struct Seg * next;
+
 }Seg;
 
 //for cleaning policy,record segment usage table
@@ -215,7 +224,9 @@ int Log_Create(
         u_int wearLimit,
         u_int total_sec,
         u_int sec_per_block,
-        u_int bks_per_seg);
+        u_int bks_per_seg,
+        u_int segs_per_log
+        );
 
 //input: disk 地址，返回长度为length的dis数据于buffer中
 int Log_Read(u_int disk_seg,
