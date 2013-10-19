@@ -8,9 +8,11 @@
 
 #define DIRECT_BK_NUM 4
 #define FILE_NAME_LENGTH 8
+#define BLOCK_SIZE FLASH_BLOCK_SIZE // temp for file layer test
 //#define N_BEGIN_BLOCK 2
 
 
+<<<<<<< HEAD
 //----------------gloabal value-----------------------
 Super_log_seg * super_log_seg;
 Disk_cache * disk_cache;
@@ -56,6 +58,13 @@ typedef struct Fl_Seg
     Fl_Block * fl_bk;
     struct Fl_Seg * next;
 }
+=======
+typedef struct Block
+{
+    u_int block_no;
+    void *bk_content;   //存file data 
+}Block;
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 
 //list "log_bk_no"th block in certain log seg
 //it contaiins which file's which file block data
@@ -65,15 +74,22 @@ typedef struct Seg_sum_entry
     u_int file_no;            
     u_int file_bk_no;
 
+<<<<<<< HEAD
     struct Seg_sum_entry * next;
 
+=======
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 }Seg_sum_entry;
 
 //每个log seg有bks_per_seg个log blocks
 typedef struct Seg_sum_bk
 {
+<<<<<<< HEAD
     //该Seg_sum_bk存在log seg的哪一个block里面
     u_int log_bk_no;        
+=======
+    u_int log_bk_no;        //该Seg_sum_bk存在log seg的哪一个block里面
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
     Seg_sum_entry * seg_sum_entry;
 
     //之后加入uid用于判断一个log seg的某个block是否alive
@@ -85,19 +101,28 @@ typedef struct Seg_sum_bk
 typedef struct Begin_bk
 {
     u_int log_bk_no;        //Begin block在log seg的哪一个block里面
+<<<<<<< HEAD
     
     //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk ssum_bk; 
+=======
+    Seg_sum_bk begin_block; 
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 }Begin_bk;
 
 //log segment definition
 typedef struct Seg
 {
     u_int log_seg_no;
+<<<<<<< HEAD
     Begin_bk begin_bk;
     Block * bk;
     struct Seg * next;
 
+=======
+    Begin_bk begin_block;
+    Block * blocks;
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 }Seg;
 
 //for cleaning policy,record segment usage table
@@ -121,8 +146,13 @@ typedef struct Checkpoint_region
 }Checkpoint;
 
 //contains direct block info in disk
+<<<<<<< HEAD
 //----in disk--seg_no: which seg this block it belongs to
 //----in disk---bk_no: what block_no in the seg
+=======
+//seg_no: which seg this block it belongs to
+//bk_no: what block_no in the seg
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 typedef struct Block_pointer
 {
     u_int seg_no;
@@ -151,7 +181,11 @@ typedef struct Inode
     //Bk_list indirect_bk;
     //Block_pointer indirect_bk;  phase 2
    
+<<<<<<< HEAD
     int mode;
+=======
+    mode_t mode;
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
     uid_t userID;
     gid_t groupID;
     time_t modify_Time;
@@ -222,6 +256,7 @@ typedef struct Super_log_seg
     //??checkpoint还没定义
     Checkpoint * checkpoint;
     Ifile * ifile;
+<<<<<<< HEAD
 
 //    Flash *flash;
 
@@ -253,9 +288,12 @@ typedef struct Disk_addr
     u_int fl_bk_no;
 }Disk_addr;
 
+=======
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 
-#endif
+//    Flash *flash;
 
+<<<<<<< HEAD
 //-------------------method------------------------------------//
 
 
@@ -308,6 +346,59 @@ int Log_Read(Disk_addr disk_addr, u_int length, void * buffer);
 int Log_Write(u_int inum, u_int block, u_int length,
          void * buffer, Disk_addr disk_addr);
  
+=======
+    //points to next log seg
+    Seg *next;  
+
+}Super_log_seg;
+
+
+//大小以flash memory的seg为单位
+typedef struct Disk_cache
+{
+    u_int fl_seg_size;  
+    Seg disk_cache_seg;
+    struct Disk_cache * next;
+}Disk_cache;
+
+
+
+
+#endif
+
+
+/****
+ *
+ * method
+ *
+logAddress indicates the log segment and block number within the segment, 
+inum is the inode number of the file, 
+block is the block number within the file,  
+length is the number of bytes to read/write/free,  
+buffer contains the data to read or write.
+ *******/
+
+//在flash memory里面分配几个segment，用来存log的结构
+//调用flash.h的函数
+int Log_Create(
+        char * file,
+        u_int wearLimit,
+        u_int total_sec,
+        u_int sec_per_block,
+        u_int bks_per_seg);
+
+//input: disk 地址，返回长度为length的dis数据于buffer中
+int Log_Read(u_int disk_seg,
+        u_int disk_bk_no, u_int length, void * buffer);
+   
+//将文件的inum(inode)的第block号块写入log, 写入log的地址为logAddress,写入内容
+int Log_Write(u_int inum, u_int block,u_int length,
+         void * buffer, LogAddress * logAddress);
+  
+//释放log中从logAddress开始长度为length的数据
+int Log_Free(LogAddress logAddress, u_int length);
+    
+>>>>>>> 429a024597787733eed9f80fc3958e9b1fbfb134
 
 //--------------------------------------------------------------------
 //释放log中从logAddress开始长度为length的数据
