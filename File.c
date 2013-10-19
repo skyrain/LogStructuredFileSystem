@@ -214,12 +214,23 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// overwrite the file,  write start at innerBlockStartOffset, with length from the buffer
 	memcpy(writeBuffer + innerBlockStartOffset, buffer, length);
 
-	// Log_Write
-	status  = Log_Write(Ino->ino, firstBlockDiskAddr.fl_bk_no , numBlocks * BlockSize_byte, writeBuffer, firstBlockDiskAddr);
-	if(status)
-	{
-		printf("fail to write on the log, Log_Write\n");
-		return status;
+	void *writePointer = calloc(1, BlockSize_byte);
+
+	// Log_Write of block one by one and buffer one by one.
+	int writeBlock;
+	Disk_addr diskAddr;
+	for(writeBlock = 0; writeBlock < numBlocks; writeBlock ++ )
+	{ 	
+		Get_Block_pointer(Ino, writeBlock, &blockPointer);
+		diskAddr.seg_no = blockPointer.seg_no;
+		diskAddr.bk_no = blockPointer.bk_no;
+		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
+		status  = Log_Write(Ino->ino, diskAddr.bk_no, BlockSize_byte, writePointer, diskAddr);
+		if(status)
+		{
+			printf("fail to write on the log, Log_Write\n");
+			return status;
+		}
 	}
 
 	//change seg usage table ---???---
@@ -263,6 +274,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	Inode->change_Time = t;
 
 	free(writeBuffer);
+	free(blockPointer);
 
 	return status;
 
