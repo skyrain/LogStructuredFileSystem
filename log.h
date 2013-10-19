@@ -235,7 +235,6 @@ typedef struct Super_log_seg
     //??checkpoint还没定义
     Checkpoint * checkpoint;
     Ifile * ifile;
-<<<<<<< HEAD
 
 //    Flash *flash;
 
