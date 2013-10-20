@@ -3,71 +3,34 @@
 #include "flash.h"
 #include "log.h"
 
-//--------------------global variables----------------------
-u_int fl_wearlimit;
-char * fl_file;          //flash memory name
-
-u_int fl_sec_num;
-u_int fl_secs_per_bk;   //？？与FLASH_SECTORS_PER_BLOCK关系
-u_int fl_bks_per_seg;
-u_int fl_bk_size;
-u_int fl_seg_size;
-// 1024个sector, 2个sector组成1block,32个block组成一个seg
-//??注意应写程序保证若用户输入导致计算出的fl_seg_num非整数则让用户重新输入
-u_int fl_seg_num;   //disk seg 总数
-u_int cache_seg_num;   //specify by the user
-
-
-//根据用户输入定义log的相应结构大小
-u_int log_bk_size;
-u_int log_bks_per_seg;
-u_int log_seg_size;
-
-//log structure的seg总数
-u_int segs_per_log;  //程序员定义
-
-//cache seg 数量，此处为默认值
-u_int cache_seg_num; 
-
-//-------------------------------------------------------------
-
-
 
 int main(int argc, char *argv[])
 {
+    //erase bk size
+    u_int er_bk_size = 16;   
 
 //用户输入--------------------------------------------    
     //？？之后会作为参数设置,此处为默认值
     //用户输入
-    fl_wearlimit = 1000;
+    wearlimit = 1000;
     strcpy(fl_file, "File");          //flash memory name
 
-    fl_sec_num = 1024;
-    fl_secs_per_bk = 16;   //？？与FLASH_SECTORS_PER_BLOCK关系
-    fl_bks_per_seg = 32;
+    sec_num = 1024;
+    bk_size = 2;
+    bks_per_seg = 32;
+    seg_size = bks_per_seg * bk_size;
     
-    //size in bytes
-    fl_bk_size = fl_secs_per_bk * FLASH_SECTOR_SIZE;
-    
-    //size in sectors
-    fl_seg_size = fl_secs_per_bk * fl_bks_per_seg;
-    // 1024个sector, 2个sector组成1block,32个block组成一个seg
+    // 1024个sector, 32个block组成一个seg
     //??注意应写程序保证若用户输入导致计算出的fl_seg_num非整数则让用户重新输入
-    fl_seg_num = fl_sec_num / fl_secs_per_bk / fl_bks_per_seg;
+    seg_num = sec_num / bk_size / bks_per_seg;
         
-        
-
     //根据用户输入定义log的相应结构大小
    
-    //size in bytes
-    log_bk_size = fl_secs_per_bk * FLASH_SECTOR_SIZE;
-    log_bks_per_seg = fl_bks_per_seg;
-    log_seg_size = log_bks_per_seg * log_bk_size;
-
-    //整个log structure的seg数
-    segs_per_log = 4;  //程序员定义
-
-
+    //程序员定义
+    segs_per_log = 4;  
+    
+    bk_content_size = bk_size * FLASH_SECTOR_SIZE;
+    
     //cache seg 数量，此处为默认值
     cache_seg_num = 4; 
  //用户输入--------------------------------------------------
