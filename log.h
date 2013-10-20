@@ -13,7 +13,7 @@
 //#define N_BEGIN_BLOCK 2
 
 //----------------gloabal value-----------------------
-Super_log_seg * super_log_seg;
+Super_log_seg * super_seg;
 Disk_cache * disk_cache;
 
 //-------points to the logAddress that could start to write data-------
