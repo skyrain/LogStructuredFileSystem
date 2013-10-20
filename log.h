@@ -94,6 +94,7 @@ typedef struct Seg_sum_bk
 
 //Suppose only 1 Seg_sum_bk as Begin_bk in Seg
 //---------一个 Begin_bk 占一个block size 大小
+//------malloc(bk_size * FLASH_SECTOR_SIZE)
 typedef struct Begin_bk
 {
     //Note: Seg_sum_bk starts at the 2nd bk of seg
