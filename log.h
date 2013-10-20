@@ -60,12 +60,6 @@ typedef struct Fl_Seg
     struct Fl_Seg * next;
 }
 
-typedef struct Block
-{
-    u_int block_no;
-    void *bk_content;   //存file data 
-}Block;
-
 //list "log_bk_no"th block in certain log seg
 //it contaiins which file's which file block data
 typedef struct Seg_sum_entry
@@ -106,11 +100,9 @@ typedef struct Seg
 {
     u_int log_seg_no;
     Begin_bk begin_bk;
-    Block * bk;
+    Log_Block * bk;
     struct Seg * next;
 
-    Begin_bk begin_block;
-    Block * blocks;
 }Seg;
 
 //for cleaning policy,record segment usage table
