@@ -123,8 +123,11 @@ typedef struct LogAddress
 typedef struct Seg_usage_table
 {
     u_int seg_no;
+
+    //--------- bks that used now in the seg-------
     u_int num_live_bk;
     //u_int num_live_bytes; // should not be num of live blocks???
+    
     time_t modify_Time;
 }Seg_usage_table;
 
@@ -149,7 +152,6 @@ typedef struct Checkpoint_region
 typedef struct Super_seg
 {
     u_int seg_no;
-
     u_int seg_num;      
     u_int seg_size;
     u_int bk_size;
@@ -162,11 +164,6 @@ typedef struct Super_seg
      */
     //??checkpoint还没定义
     Checkpoint * checkpoint;
-
-//    Flash *flash;
-
-    //points to next log seg
-    Seg *next;  
 
 }Super_seg;
 
