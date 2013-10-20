@@ -146,7 +146,7 @@ typedef struct Checkpoint_region
 
 
 //super log segment 存整个log的信息和checkpoint等
-typedef struct Super_log_seg
+typedef struct Super_seg
 {
     u_int seg_no;
 
@@ -168,7 +168,7 @@ typedef struct Super_log_seg
     //points to next log seg
     Seg *next;  
 
-}Super_log_seg;
+}Super_seg;
 
 
 //大小以flash memory的seg为单位
