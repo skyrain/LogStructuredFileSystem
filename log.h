@@ -8,13 +8,16 @@
 
 #define DIRECT_BK_NUM 4
 #define FILE_NAME_LENGTH 8
-#define BLOCK_SIZE FLASH_BLOCK_SIZE // temp for file layer test
+//#define BLOCK_SIZE FLASH_BLOCK_SIZE // temp for file layer test
+
 //#define N_BEGIN_BLOCK 2
 
 //----------------gloabal value-----------------------
 Super_log_seg * super_log_seg;
 Disk_cache * disk_cache;
-LogAddress tail_log_seg;
+
+//-------points to the logAddress that could start to write data-------
+LogAddress tail_log_addr;
 
 //-------contains fl seg which only cares about---------
 //------------- data ----------------------------------
@@ -195,29 +198,6 @@ typedef struct Ifile
 }Ifile;
 
 
-/*
-typedef struct Inode_map_list
-{
-    Inode_location inode_location;
-    struct Inode_map_list* next;
-}Inode_map_list;
-
-//inode_no list, stores the inode's id
-//be written into log as block
-typedef struct Inode_map
-{
-   Inode_map_list inode_map_list; 
-}Inode_map;
-
-*/
-
-typedef struct LogAddress
-{
-    u_int log_seg_no;
-    u_int log_bk_no;
-}LogAddress;
-
-
 //super log segment 存整个log的信息和checkpoint等
 typedef struct Super_log_seg
 {
@@ -265,6 +245,12 @@ typedef struct Disk_addr
     u_int fl_seg_no;
     u_int fl_bk_no;
 }Disk_addr;
+
+typedef struct LogAddress
+{
+    u_int log_seg_no;
+    u_int log_bk_no;
+}LogAddress;
 
 
 //    Flash *flash;
@@ -314,7 +300,7 @@ int Log_Read(Disk_addr disk_addr, u_int length, void * buffer);
 
 
 //-----------------------------------------------------------------
-//将文件的inum(inode)的第block号块写入log, 写入log的地址为logAddress,写入内容
+//将文件的inum(inode)的第block号块写入log,写入内容
 //----------------------input--------------------------------------
 //--------input: length - always = fl_bk_size;
 //--------input: block - bk no within the file
@@ -328,6 +314,8 @@ int Log_Write(u_int inum, u_int block, u_int length,
 
 
 //--------------------------------------------------------------------
+//--------??use for File_Delete--------------------------------
+
 //释放log中从logAddress开始长度为length的数据
 int Log_Free(LogAddress logAddress, u_int length);
 

@@ -27,8 +27,10 @@ int Log_Create(
     //--------------------------------------------------------------
     //-----1st log seg is super log seg----------------------------
     //-------usable log seg start from 1 ---------------------------
-    tail_log_seg->log_seg_no = 1;
-    tail_log_seg->log_bk_no = 0;
+    //-----------[1, segs per log -1]----------------
+    tail_log_addr->log_seg_no = 1;
+    //-----------[1, bks per seg - 1]-----------
+    tail_log_addr->log_bk_no = 1;
 
     //initialize log structure,
     //根据用户输入参数创建flash memory
@@ -391,13 +393,63 @@ int Log_Read(Disk_addr disk_addr, u_int length, void * buffer);
 
 }
 
+//-------------assist func--------------------------------------
+
+//--------call this func after write data to log----------------
+void setLogTail()
+{
+    //If come to end of certain log seg
+    if(tail_log_addr->log_bk_no == log_bks_per_seg -1)
+    {
+        //If come to every end of log structure
+        if(tail_log_addr->log_seg_no == segs_per_log - 1)
+        {
+            tail_log_addr->log_seg_no = 1;
+            tail_log_addr->log_bk_no = 1;
+        }
+        //else turn to next log seg's 1th bk
+        else
+        {
+            tail_log_addr->log_seg_no += 1;
+            tail_log_addr->log_bk_no = 1;
+        }
+    }
+    //just add 1 of bk_no
+    else
+    {
+        tail_log_addr->log_bk_no += 1;
+    }
+}
 
 
-//将文件的inum(inode)的第block号块写入log, 写入log的地址为logAddress,写入内容
+//---------once tail_log_addr reaches certain log seg's end--------
+//-------- push that log seg data into disk------------------------
+//---------call this func before setLogTail()-------------------
+void pushToDisk()
+{
+    //If reaches certain log seg's end
+    if(tail_log_addr->log_bk_no == log_bks_per_seg -1)
+    {
+
+    }
+}
+
+
+//------------------------------------------------------------
+
+
+
+
+//-----------------------------------------------------------------
+//将文件的inum(inode)的第block号块写入log, 写入log的地址为tail_log_addr,写入内i容
+//----------------------input--------------------------------------
+//--------input: length - always = fl_bk_size;
+//-----------!!! 一次只写一个 block的数据--------------------------
+//--------input: block - bk no within the file
 int Log_Write(u_int inum, u_int block, u_int length,
                  void * buffer, Disk_addr * disk_addr)
 {
-    //---------------- 
+    //-----
 
 
 }

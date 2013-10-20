@@ -181,7 +181,7 @@ int	Flash_Read(Flash flash, u_int sector, u_int count, void *buffer);
  *************************************************************************
  */
 
-int	Flash_Write(Flash flash, u_int offset, u_int count, void *buffer);
+int	Flash_Write(Flash flash, u_int sector, u_int count, void *buffer);
 
 /*
  *************************************************************************
@@ -226,10 +226,8 @@ int	Flash_Erase(Flash flash, u_int block, u_int count);
  *************************************************************************
  */
 
-//int	Flash_Erase(Flash flash, u_int offset, u_int count);
+int	Flash_GetWear(Flash flash, u_int block, u_int *wear);
 
-
-int Flash_GetWear(Flash flashHandle, int block, u_int *wear);
 /*
  *************************************************************************
  * int

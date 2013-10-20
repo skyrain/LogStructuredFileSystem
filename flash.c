@@ -107,7 +107,7 @@ done:
 int
 Flash_GetWear(
     Flash       flashHandle,
-    int         block,
+    u_int       block,
     u_int       *wear)
 
 {
