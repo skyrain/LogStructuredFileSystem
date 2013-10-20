@@ -43,10 +43,9 @@ u_int seg_size;
 //-----------total seg num-------------
 u_int seg_num;
 
-//------  default: 2-----------------------
-//------ chose by user--------------------
-u_int flie_bk_size;
-
+//-----------一个bk 可以存多少bytes的数据-----------
+//----------- in bytes-----------------------------
+u_int bk_content_size;
 
 //--------default :4 ------------------
 //------chosen by user----------------
@@ -59,24 +58,13 @@ u_int cache_seg_num;
 //------------------structure definition---------------------
 
 //----------------------------------------------------
+//-------malloc(bk_size * FLASH_SECTOR_SIZE);
+//------------bk_content 可以存above大小的data
 typedef struct Block
 {
-    u_int bk_no;
-
-/*    
-    //--------the bk is pointed by which file's which bk
-    //--------initialize to be -1, means no file points to 
-    //------this bk now;
-    u_int ino;
-    u_int ino_bk_no;
-*/
-
     //-----存file data------
     //----可以存的大小为
-    // 一个block大小 - (Block令两个属性的bytes,sizeof 计算)
     void * bk_content;   
-   
-    struct Block * next;
 
 }Block;
 
@@ -105,22 +93,19 @@ typedef struct Seg_sum_bk
 }Seg_sum_bk;
 
 //Suppose only 1 Seg_sum_bk as Begin_bk in Seg
+//---------一个 Begin_bk 占一个block size 大小
 typedef struct Begin_bk
 {
-    u_int bk_no;        //Begin block在log seg的哪一个block里面
-    
     //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk ssum_bk; 
+
 }Begin_bk;
 
 //----segment definition----------------
 typedef struct Seg
 {
-    u_int seg_no;
     Begin_bk begin_bk;
     Block * bk;
-
-    struct Seg * next;
 
 }Seg;
 
@@ -234,10 +219,6 @@ typedef struct Super_log_seg
     u_int seg_num;      
     u_int seg_size;
     u_int bk_size;
-
-    //----一个block可以真实存的bytes的大小
-    //---- in bytes----------------------
-    u_int bk_content_size;
     
     Seg_usage_table * seg_usage_table;
     /* 
