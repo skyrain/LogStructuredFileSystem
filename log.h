@@ -19,52 +19,72 @@ Disk_cache * disk_cache;
 //-------points to the logAddress that could start to write data-------
 LogAddress tail_log_addr;
 
-//-------contains fl seg which only cares about---------
-//------------- data ----------------------------------
-//-------initial fl_seg_no：  1   ----------------------
-Fl_seg * fl_seg;
-//------------------------------------------------
+u_int wearlimit;
 
-//--------Block in log structure----not in disk-----------
-typedef struct Log_Block
+//----flash memory name---------------
+char * fl_file;          
+
+//--------default: 1024-------------
+//-------- chosen by user-------------
+u_int sec_num;
+
+//-------default: 2-----------------
+//-------2 sectors = 1 block----------
+u_int bk_size;
+
+//------default: 32--------------------------
+//---------chose by user-------------------
+u_int bks_per_seg;
+
+u_int seg_size;
+
+//??注意应写程序保证若用户输入导致计算出的seg_num非整数则让用户重新输
+//入
+//-----------total seg num-------------
+u_int seg_num;
+
+//------  default: 2-----------------------
+//------ chose by user--------------------
+u_int flie_bk_size;
+
+
+//--------default :4 ------------------
+//------chosen by user----------------
+u_int cache_seg_num;   
+
+//-------------------------------------------------------------
+
+
+
+//------------------structure definition---------------------
+
+//----------------------------------------------------
+typedef struct Block
 {
-    u_int log_bk_no;
-    
-    void * log_bk_content;   //存file data 
-   
-    struct Log_Block * next;
+    u_int bk_no;
 
-}Log_Block;
-
-
-//----------flash memory block info-------------
-typedef struct Fl_Block
-{
-    u_int fl_bk_no;           //bk no within the fl_seg
-    
+/*    
     //--------the bk is pointed by which file's which bk
     //--------initialize to be -1, means no file points to 
     //------this bk now;
     u_int ino;
     u_int ino_bk_no;
+*/
 
-    struct Fl_Block * next;
+    //-----存file data------
+    //----可以存的大小为
+    // 一个block大小 - (Block令两个属性的bytes,sizeof 计算)
+    void * bk_content;   
+   
+    struct Block * next;
 
-}Fl_Block;
+}Block;
 
-//------------flash memory seg info--------------
-typedef struct Fl_Seg
-{
-    u_int fl_seg_no;
-    Fl_Block * fl_bk;
-    struct Fl_Seg * next;
-}
-
-//list "log_bk_no"th block in certain log seg
+//list "bk_no"th block in certain seg
 //it contaiins which file's which file block data
 typedef struct Seg_sum_entry
 {
-    u_int log_bk_no;
+    u_int bk_no;
     u_int file_no;            
     u_int file_bk_no;
 
@@ -72,15 +92,14 @@ typedef struct Seg_sum_entry
 
 }Seg_sum_entry;
 
-//每个log seg有bks_per_seg个log blocks
+//每个seg有 bks_per_seg 个 blocks
 typedef struct Seg_sum_bk
 {
-    //该Seg_sum_bk存在log seg的哪一个block里面
-    u_int log_bk_no;        
-    u_int log_bk_no;        //该Seg_sum_bk存在log seg的哪一个block里面
+    //该Seg_sum_bk存在seg的哪一个block里面
+    u_int bk_no;        
     Seg_sum_entry * seg_sum_entry;
 
-    //之后加入uid用于判断一个log seg的某个block是否alive
+    //之后加入uid用于判断一个seg的某个block是否alive
     //??
 
 }Seg_sum_bk;
@@ -88,60 +107,67 @@ typedef struct Seg_sum_bk
 //Suppose only 1 Seg_sum_bk as Begin_bk in Seg
 typedef struct Begin_bk
 {
-    u_int log_bk_no;        //Begin block在log seg的哪一个block里面
+    u_int bk_no;        //Begin block在log seg的哪一个block里面
     
     //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk ssum_bk; 
-    Seg_sum_bk begin_block; 
 }Begin_bk;
 
-//log segment definition
+//----segment definition----------------
 typedef struct Seg
 {
-    u_int log_seg_no;
+    u_int seg_no;
     Begin_bk begin_bk;
-    Log_Block * bk;
+    Block * bk;
+
     struct Seg * next;
 
 }Seg;
 
+typedef struct LogAddress
+{
+    u_int seg_no;
+    u_int bk_no;
+
+}LogAddress;
+
 //for cleaning policy,record segment usage table
 //per segment linked to seg_usage_table
-//检查flash memory的每一个seg，知道其利用率
+//检查每一个seg，知道其利用率
 typedef struct Seg_usage_table
 {
-    u_int fl_seg_no;
+    u_int seg_no;
     u_int num_live_bk;
     //u_int num_live_bytes; // should not be num of live blocks???
     time_t modify_Time;
 }Seg_usage_table;
 
 
-//store metadata
+//--------1.addrs of all blocks in the inode map - ifile_no
+//---- ifile contains this info------------------
+//--------2.seg usage table
+//--------3. current time
+//--------4. pointer to the last segment written
 typedef struct Checkpoint_region
 {
-    //???address of all blocks in lfs or flash memory
-
-
+    u_int ifile_ino;
+    Seg_usage_table *seg_usage_table;
+    u_int curr_time;
+    Seg * last_seg_written;
 }Checkpoint;
 
+
+/*  ---------------- in file.h--------------------------------
+
 //contains direct block info in disk
-//----in disk--seg_no: which seg this block it belongs to
-//----in disk---bk_no: what block_no in the seg
-//seg_no: which seg this block it belongs to
-//bk_no: what block_no in the seg
 typedef struct Block_pointer
 {
-    u_int seg_no;
-    u_int bk_no;
+    //------- file bk size in sectors--------
+    //------actually in flash memory: 1 sector is its 1 block-------
+    logAddress bk_log_addr;
+
 }Block_pointer;
 
-//this structure doesnt need
-//typedef struct Bk_list
-//{
-//    Direct_bk bk;
-//    struct Bk_list* next;
-//}Bk_list;
 
 typedef struct Inode
 {
@@ -181,6 +207,11 @@ typedef struct Inode_location
 
 }Inode_location;
 
+--------------------------------------------------------------*/
+
+
+
+/*------------- in directory.h-------------------------------------
 //Ifile stores the inode_location of each inode
 //in file "ifile"
 typedef struct Ifile
@@ -189,15 +220,25 @@ typedef struct Ifile
     Inode_location * inode_loc;
 }Ifile;
 
+-----------------------------------------------------------------*/
+
+
+
+
 
 //super log segment 存整个log的信息和checkpoint等
 typedef struct Super_log_seg
 {
-    u_int log_seg_no;
+    u_int seg_no;
+
+    u_int seg_num;      
     u_int seg_size;
     u_int bk_size;
-    u_int fl_seg_num;                     //整个flash memory大小
-    u_int log_seg_num;
+
+    //----一个block可以真实存的bytes的大小
+    //---- in bytes----------------------
+    u_int bk_content_size;
+    
     Seg_usage_table * seg_usage_table;
     /* 
      * edited 1 weng 
@@ -206,7 +247,6 @@ typedef struct Super_log_seg
      */
     //??checkpoint还没定义
     Checkpoint * checkpoint;
-    Ifile * ifile;
 
 //    Flash *flash;
 
@@ -221,28 +261,14 @@ typedef struct Disk_cache
 {
     u_int cache_no;
 
-    //this cache is from which fl seg
-    u_int fl_seg_no;
-
-    void * content;
+    //this cache is from which seg
+    Seg * seg;
 
     u_int IS_JUST_UPDATE;
 
     struct Disk_cache * next;
 
 }Disk_cache;
-
-typedef struct Disk_addr
-{
-    u_int fl_seg_no;
-    u_int fl_bk_no;
-}Disk_addr;
-
-typedef struct LogAddress
-{
-    u_int log_seg_no;
-    u_int log_bk_no;
-}LogAddress;
 
 
 //    Flash *flash;
@@ -253,16 +279,12 @@ typedef struct LogAddress
 //--------create cache------------------------
 //return 0: create successfully
 //retrun 1: create not successfully
-int create_cache(u_int seg_num, u_int fl_seg_size);
+int create_cache();
 
 //read_cache
-//---------------  every time read block size data -----------
 //--return true all data is in cache, read directly from cache--------
 //--return false not all data is in cache, read from disk,then---------
-//-----------stored the read data in cache from cache beginning----------
-//input: length : data in bytes, now always = fl_bk_size
-int read_cache(Disk_addr disk_addr, u_int length, void * buffer);
-
+int read_cache(LogAddress logAddress, u_int length, void * buffer);
 
 
 /*
@@ -276,39 +298,23 @@ int read_cache(Disk_addr disk_addr, u_int length, void * buffer);
 
 //在flash memory里面分配几个segment，用来存log的结构
 //调用flash.h的函数
-int Log_Create(
-        char * file,
-        u_int wearLimit,
-        u_int total_sec,
-        u_int sec_per_block,
-        u_int bks_per_seg,
-        u_int segs_per_log
-        );
+int Log_Create();
 
 //-----------------------------------------------------------
 //input: disk 地址，返回长度为length的dis数据于buffer中
-//--------length: in bytes always = fl_bk_size
-int Log_Read(Disk_addr disk_addr, u_int length, void * buffer);
+int Log_Read(LogAddress logAddr, u_int length, void * buffer);
 
 
 //-----------------------------------------------------------------
 //将文件的inum(inode)的第block号块写入log,写入内容
 //----------------------input--------------------------------------
-//--------input: length - always = fl_bk_size;
-//--------input: block - bk no within the file
+//--------input: block - bk_no within the file
 int Log_Write(u_int inum, u_int block, u_int length,
-         void * buffer, Disk_addr disk_addr);
- 
-    //points to next log seg
-    Seg *next;  
-
-}Super_log_seg;
-
+         void * buffer, LogAddress logaddr);
 
 //--------------------------------------------------------------------
-//--------??use for File_Delete--------------------------------
-
-//释放log中从logAddress开始长度为length的数据
+//释放log中从logAddress开始长度为length的数据,
+//--free 最小blocks数 which cover the length
 int Log_Free(LogAddress logAddress, u_int length);
 
 #endif
