@@ -301,6 +301,7 @@ int File_Free(Inode *Ino)
 
 }
 
+/*
 int File_Drop(Inode *Ino, int offset)
 {
 	Block_pointer *BlockBuffer = NULL;
@@ -329,6 +330,8 @@ int File_Drop(Inode *Ino, int offset)
 
 	}
 }
+*/
+
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
