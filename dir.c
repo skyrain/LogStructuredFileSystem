@@ -1,6 +1,5 @@
 /*
  * dir.c
- * Author: Weng
  * Created on: oct 17, 2013
  * This is the directory layer c code
  */
@@ -17,12 +16,12 @@ int ifile_length; //number of files currently held in the ifile;
 //Init the Directory layer, as a special file, it needs use
 //File_Layer_Init as well, creat the root directory if not there.
 //read from the ifile's inode
-int Dir_Layer_Init(char *filename, int cacheSize, int checkPointPeriod)
+int Dir_Layer_Init(char *filename)
 {
 	int status = 0;
 	// Init the File layer as well
 	// int normalclose; save for the checkpoint roll forward---???---
-	status = File_Layer_Init(filename, &inode_ifile, cacheSize, checkPointPeriod);
+	status = File_Layer_Init(filename, &inode_ifile);
 	
 	if(status)
 	{
@@ -32,8 +31,8 @@ int Dir_Layer_Init(char *filename, int cacheSize, int checkPointPeriod)
 
 	printf("Dir Layer is Initing.\n");
 	
-	// Init the ifile and load it to the memory as well as set the
-	// length of ifile ---???--- array or link list.
+	// Init the ifile by calling File_read, and return the ifile to
+	// the memory and load it to the memory as well as set the
 	ifile = (Inode *)malloc(inode_ifile->filesize);
 	status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
 	if(status)
@@ -62,7 +61,20 @@ int Dir_Layer_Init(char *filename, int cacheSize, int checkPointPeriod)
 		
 	return status;
 }
-a
+
+// open a directory or file
+int Dir_Open_File(const char *path, struct fuse_file_info *fi)
+{
+	Inode *myNode;
+	int status;
+
+	status = Get_Inode(path, &myNode);
+	if(status) {printf("openning file fail\n"); return status;}
+
+	fi->fh = myNod->ino;
+
+	return status;
+}
 //mkdir, make a directory
 int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 {
@@ -82,26 +94,30 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	Inode *dirNode;
 	Inode *parentDirNode;
 	struct fuse_file_info *fi = NULL;
-	//Create a directory and get its inode to init
+	// Create a directory and get its inode to init
+	// this will also add its info to the parent dir
 	Dir_Create_File(dir_name, mode, uid, gid, fi);
+	
 	Get_Inode(dir_name, &dirNode);
 
 	// ADd . and .. to this directory
-	strcpy(currentDir[1].filename, "..");
+	strcpy(currentDir[1]->filename, "..");
+	// if this dir is the root dir then..
 	if(strcmp(dir_name, "/") ==0 )
 	{
-		currentDir[1].inum = UNDEFINE_FILE;
+		currentDir[1]->inum = UNDEFINE_FILE;
 	}
 	else
 	{
-		status = Get_Dir_Inode(dir_name, &parentDirNode, currentDir[0].filename);
+		status = Get_Dir_Inode(dir_name, &parentDirNode, parentDirNode->filename);
 		currentDir[1].inum = parentDirNode->ino;
 	}
 
 	// Current directory "."
 	strcpy(currentDir[0].filename, ".");
 	currentDir[0].inum = dirNode->ino;
-
+	
+	// create the new directory.
 	status = File_Write(dirNode, 0, 2*sizeof(DirEntry), &currentDir);
 	if(status)
 	{
@@ -110,7 +126,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	}
 	
 	// flush the content to the file, 
-	// Write the inode for the new file to the disk
+	// Write the inode for the new file to the ifile
 	status = Flush_Ino(dirNode->ino);
 
 	return status;
@@ -118,7 +134,6 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 
 int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi){
 	// Assume this file does not exist already
-	// For now, do not attempt to recycle old inums
 
 	int inum, status;
 	time_t t;
@@ -207,7 +222,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 	//int inum = ROOT_INUM;
 	int numfiles;
 	Inode *dirNode = &ifile[ROOT_INUM];
-	DirEntry *dir  = _get_Dir(dirNode, &numfiles);
+	DirEntry *dir  = Get_Dir(dirNode, &numfiles);
 	if (dir == NULL){
 		printf("ERROR\n");
 		return -ENOENT;
@@ -280,65 +295,6 @@ int Get_Inode(const char *path, Inode **returnNode){
 	time( &inode_ifile->accessTime );
 
 	return 0;
-}
-
-aint Dir_Create_File(const char *path, mode_t mode, uid_t uid, git_t gid, struct fuse_file_info)
-{
-	// assume this file does not exist
-	
-	int inum, status;
-	time_t t;
-	time(&t); // store current time in t
-
-	if(path[0] != '/')
-	{
-		printf("invalid path \n");
-		return -1;
-	}
-
-	if(stccmp(path, "/") != 0)
-	{
-		Inode *someNode;
-		status =Get_Inode(path, &someNode);
-		if( status =0 )
-		{
-			printf("file exists already! \n");
-			return -EEXIST;
-		}
-	}
-
-	//Get a new inum for this file, add it to the end and expand the ifile
-	inum = Get_New_Ino();
-
-	if(inum < 0)
-	{
-		printf("cant find a inum \n");
-		return -1
-	}
-
-	status = File_Init(&ifile[inum], S_IFREG);
-	ifile[inum].ino = inum;
-	ifile[inum].mode = mode;
-	ifile[inum].num_links = 1;
-	ifile[inum].userID = uid;
-	ifile[inum].groupID = gid;
-	
-	status = Add_File_To_Directory(path, inum);
-	if(status)
-	{
-		printf("faile to add to the directory");
-		return status;
-	}
-
-	// Write the inode for the new file to the disk
-	status = Flush_ino(inum);
-	if(status)
-	{
-		printf("fail to write the inode to disk");
-		return status;
-	}
-
-	return status;
 }
 
 int Flush_Ino(int inum)

@@ -5,7 +5,7 @@
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.8	//
 Add_File_To_Directory	dir.c	/^int Add_File_To_Directory(const char *path, int inum)$/;"	f
-BLOCK_SIZE	log.h	11;"	d
+BLOCK_SIZE	File.c	18;"	d	file:
 BLOCK_SIZE	log1.h	9;"	d
 Begin_bk	log.h	/^typedef struct Begin_bk$/;"	s
 Begin_bk	log.h	/^}Begin_bk;$/;"	t	typeref:struct:Begin_bk
@@ -34,6 +34,8 @@ Dir_Create_File	dir.c	/^int Dir_Create_File(const char *path, mode_t mode, uid_t
 Dir_Layer_Init	dir.c	/^int Dir_Layer_Init(char *filename, int cacheSize, int checkPointPeriod)$/;"	f
 Dir_Write_file	dir.c	/^int Dir_Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)$/;"	f
 Dir_mkdir	dir.c	/^int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)$/;"	f
+Disk_addr	log.h	/^typedef struct Disk_addr$/;"	s
+Disk_addr	log.h	/^}Disk_addr;$/;"	t	typeref:struct:Disk_addr
 Disk_cache	log.h	/^typedef struct Disk_cache$/;"	s
 Disk_cache	log.h	/^}Disk_cache;$/;"	t	typeref:struct:Disk_cache
 FALSE	flash.h	40;"	d
@@ -60,15 +62,18 @@ FLASH_STATE_FULL	flash.c	49;"	d	file:
 FLASH_STATE_FULL	lfs/flash.c	49;"	d	file:
 FLASH_WRITE	flash.c	21;"	d	file:
 FLASH_WRITE	lfs/flash.c	21;"	d	file:
-FREE_BLOCK_NUM	File.c	16;"	d	file:
+FREE_BLOCK_NUM	File.c	15;"	d	file:
 FUSE_USE_VERSION	dir.h	9;"	d
 FUSE_USE_VERSION	hello.c	11;"	d	file:
 File_Drop	File.c	/^int File_Drop(Inode *Ino, int offset)$/;"	f
 File_Free	File.c	/^int File_Free(Inode *Ino)$/;"	f
 File_Init	File.c	/^int File_Init(Inode *Ino, int type)$/;"	f
-File_Layer_Init	File.c	/^int File_Layer_Init(char *filename, Inode **ifile, int *closestatus)$/;"	f
+File_Layer_Init	File.c	/^int File_Layer_Init()$/;"	f
 File_Read	File.c	/^int File_Read(Inode *Ino, int offset, int length, void *buffer)$/;"	f
-File_Write	File.c	/^int File_Write(Inode *Ino, int offset, int length, void *buffer){}$/;"	f
+File_Write	File.c	/^int File_Write(Inode *Ino, int offset, int length, void *buffer)$/;"	f
+Fl_Block	log.h	/^typedef struct Fl_Block$/;"	s
+Fl_Block	log.h	/^}Fl_Block;$/;"	t	typeref:struct:Fl_Block
+Fl_Seg	log.h	/^typedef struct Fl_Seg$/;"	s
 Flash	flash.h	/^typedef void *Flash;$/;"	t
 Flash	lfs/flash.h	/^typedef void *Flash;$/;"	t
 FlashGetState	flash.c	/^FlashGetState($/;"	f
@@ -109,6 +114,7 @@ Get_Dir	dir.c	/^DirEntry *Get_Dir(Inode *dirNode, int *numfiles){$/;"	f
 Get_Dir_Inode	dir.c	/^int Get_Dir_Inode(const char *path, inode **returnNode, char *filename){$/;"	f
 Get_Inode	dir.c	/^int Get_Inode(const char *path, Inode **returnNode){$/;"	f
 Get_New_Ino	dir.c	/^int Get_New_Ino(){$/;"	f
+IS_JUST_UPDATE	log.h	/^    u_int IS_JUST_UPDATE;$/;"	m	struct:Disk_cache
 Ifile	log.h	/^typedef struct Ifile$/;"	s
 Ifile	log.h	/^}Ifile;$/;"	t	typeref:struct:Ifile
 Inode	log.h	/^typedef struct Inode$/;"	s
@@ -129,9 +135,11 @@ LogAddress	log.h	/^typedef struct LogAddress$/;"	s
 LogAddress	log.h	/^}LogAddress;$/;"	t	typeref:struct:LogAddress
 LogAddress	log1.h	/^typedef struct LogAddress$/;"	s
 LogAddress	log1.h	/^}LogAddress;$/;"	t	typeref:struct:LogAddress
+Log_Block	log.h	/^typedef struct Log_Block$/;"	s
+Log_Block	log.h	/^}Log_Block;$/;"	t	typeref:struct:Log_Block
 Log_Create	log.c	/^int Log_Create($/;"	f
-NARGS	hello.c	121;"	d	file:
-READ_ERROR	File.c	17;"	d	file:
+Log_Write	log.c	/^int Log_Write(u_int inum, u_int block, u_int length,$/;"	f
+READ_ERROR	File.c	16;"	d	file:
 SEG_NUM	log1.h	/^    u_int SEG_NUM = ;$/;"	m	struct:log_beginning
 SEG_SIZE	log1.h	10;"	d
 Seg	log.h	/^typedef struct Seg$/;"	s
@@ -165,10 +173,12 @@ accese_Time	log1.h	/^    time_t accese_Time;$/;"	m	struct:Inode
 access_Time	log.h	/^    time_t access_Time;$/;"	m	struct:Inode
 assume	flash.c	12;"	d	file:
 assume	lfs/flash.c	12;"	d	file:
+begin_bk	log.h	/^    Begin_bk begin_bk;$/;"	m	struct:Seg
 begin_block	log.h	/^    Begin_bk begin_block;$/;"	m	struct:Seg
 begin_block	log.h	/^    Seg_sum_bk begin_block; $/;"	m	struct:Begin_bk
 begin_block	log1.h	/^    Begin_bk begin_block;$/;"	m	struct:Seg
 begin_block	log1.h	/^    Seg_sum_bk* begin_block;$/;"	m	struct:Begin_bk
+bk	log.h	/^    Block * bk;$/;"	m	struct:Seg
 bk_content	log.h	/^    void *bk_content;   \/\/存file data $/;"	m	struct:Block
 bk_no	log.h	/^    u_int bk_no;$/;"	m	struct:Block_pointer
 bk_no	log1.h	/^    u_int bk_no;$/;"	m	struct:Block_pointer
@@ -186,15 +196,20 @@ block_size	log1.h	/^    u_int block_size = FLASH_BLOCK_SIZE;$/;"	m	struct:log_be
 blocks	flash.c	/^    u_int       blocks;$/;"	m	struct:FlashHeader	file:
 blocks	lfs/flash.c	/^    u_int       blocks;$/;"	m	struct:FlashHeader	file:
 blocks	log.h	/^    Block * blocks;$/;"	m	struct:Seg
+cache_no	log.h	/^    u_int cache_no;$/;"	m	struct:Disk_cache
+cache_seg_num	mklfs.c	/^u_int cache_seg_num;   \/\/specify by the user$/;"	v
+cache_seg_num	mklfs.c	/^u_int cache_seg_num; $/;"	v
 change_Time	log.h	/^    time_t change_Time;$/;"	m	struct:Inode
 change_Time	log1.h	/^    time_t change_Time;$/;"	m	struct:Inode
 checkpoint	log.h	/^    Checkpoint * checkpoint;$/;"	m	struct:Super_log_seg
 checkpoint	log1.h	/^     Checkpoint checkpoint;$/;"	m	struct:log_beginning
+content	log.h	/^    void * content;$/;"	m	struct:Disk_cache
 create_Time	log.h	/^    time_t create_Time;$/;"	m	struct:Inode
 create_Time	log1.h	/^    time_t create_Time;$/;"	m	struct:Inode
+create_cache	log.c	/^int create_cache(u_int seg_num, u_int fl_seg_size)$/;"	f
 direct_bk	log.h	/^    Block_pointer direct_bk[DIRECT_BK_NUM];$/;"	m	struct:Inode
 direct_bk	log1.h	/^    Block_pointer direct_bk[DIRECT_BK_NUM];$/;"	m	struct:Inode
-disk_cache_seg	log.h	/^    Seg disk_cache_seg;$/;"	m	struct:Disk_cache
+disk_cache	log.h	/^Disk_cache * disk_cache;$/;"	v
 eraseBlocks	flash.c	/^    long long   eraseBlocks;$/;"	m	struct:FlashInfo	file:
 eraseBlocks	lfs/flash.c	/^    long long   eraseBlocks;$/;"	m	struct:FlashInfo	file:
 eraseOps	flash.c	/^    long long   eraseOps;$/;"	m	struct:FlashInfo	file:
@@ -213,9 +228,23 @@ filesize	log.h	/^    u_int filesize;$/;"	m	struct:Inode
 filesize	log1.h	/^    u_int filesize;$/;"	m	struct:Inode
 filetype	log.h	/^    u_int filetype;$/;"	m	struct:Inode
 filetype	log1.h	/^    u_int filetype;$/;"	m	struct:Inode
+fl_bk	log.h	/^    Fl_Block * fl_bk;$/;"	m	struct:Fl_Seg
+fl_bk_no	log.h	/^    u_int fl_bk_no;           \/\/bk no within the fl_seg$/;"	m	struct:Fl_Block
+fl_bk_no	log.h	/^    u_int fl_bk_no;$/;"	m	struct:Disk_addr
+fl_bk_size	mklfs.c	/^u_int fl_bk_size;$/;"	v
+fl_bks_per_seg	mklfs.c	/^u_int fl_bks_per_seg;$/;"	v
+fl_file	mklfs.c	/^char * fl_file;          \/\/flash memory name$/;"	v
+fl_sec_num	mklfs.c	/^u_int fl_sec_num;$/;"	v
+fl_secs_per_bk	mklfs.c	/^u_int fl_secs_per_bk;   \/\/？？与FLASH_SECTORS_PER_BLOCK关系$/;"	v
+fl_seg	log.h	/^Fl_seg * fl_seg;$/;"	v
+fl_seg_no	log.h	/^    u_int fl_seg_no;$/;"	m	struct:Disk_addr
+fl_seg_no	log.h	/^    u_int fl_seg_no;$/;"	m	struct:Disk_cache
+fl_seg_no	log.h	/^    u_int fl_seg_no;$/;"	m	struct:Fl_Seg
 fl_seg_no	log.h	/^    u_int fl_seg_no;$/;"	m	struct:Seg_usage_table
 fl_seg_num	log.h	/^    u_int fl_seg_num;                     \/\/整个flash memory大小$/;"	m	struct:Super_log_seg
-fl_seg_size	log.h	/^    u_int fl_seg_size;  $/;"	m	struct:Disk_cache
+fl_seg_num	mklfs.c	/^u_int fl_seg_num;   \/\/disk seg 总数$/;"	v
+fl_seg_size	mklfs.c	/^u_int fl_seg_size;$/;"	v
+fl_wearlimit	mklfs.c	/^u_int fl_wearlimit;$/;"	v
 flags	flash.c	/^    Flash_Flags	flags;$/;"	m	struct:FlashInfo	file:
 flags	lfs/flash.c	/^    Flash_Flags	flags;$/;"	m	struct:FlashInfo	file:
 flash	log1.h	/^     Flash *flash;$/;"	m	struct:log_beginning
@@ -234,9 +263,11 @@ hello_str	hello.c	/^static const char *hello_str = "Hello World!\\n";$/;"	v	file
 ifile	dir.c	/^Inode *ifile; \/\/array of inodes$/;"	v
 ifile	log.h	/^    Ifile * ifile;$/;"	m	struct:Super_log_seg
 ifile_length	dir.c	/^int ifile_length; \/\/number of files currently held in the ifile;$/;"	v
+ino	log.h	/^    u_int ino;$/;"	m	struct:Fl_Block
 ino	log.h	/^    u_int ino;$/;"	m	struct:Inode
 ino	log1.h	/^    u_int ino;$/;"	m	struct:Inode
 ino	log1.h	/^    u_int ino;$/;"	m	struct:Inode_location
+ino_bk_no	log.h	/^    u_int ino_bk_no;$/;"	m	struct:Fl_Block
 inode	log.h	/^    Inode inode;$/;"	m	struct:Inode_location
 inode_ifile	dir.c	/^Inode *inode_ifile; \/\/ the inode of ifile;$/;"	v
 inode_loc	log.h	/^    Inode_location * inode_loc;$/;"	m	struct:Ifile
@@ -245,23 +276,29 @@ inode_map_list	log1.h	/^   Inode_map_list inode_map_list; $/;"	m	struct:Inode_ma
 inum	dir.h	/^	int inum;$/;"	m	struct:DirEntry
 link_path	hello.c	/^static const char *link_path = "\/link";$/;"	v	file:
 log_beginning	log1.h	/^struct log_beginning$/;"	s
+log_bk_content	log.h	/^    void * log_bk_content;   \/\/存file data $/;"	m	struct:Log_Block
+log_bk_no	log.h	/^    u_int log_bk_no;        $/;"	m	struct:Seg_sum_bk
 log_bk_no	log.h	/^    u_int log_bk_no;        \/\/Begin block在log seg的哪一个block里面$/;"	m	struct:Begin_bk
 log_bk_no	log.h	/^    u_int log_bk_no;        \/\/该Seg_sum_bk存在log seg的哪一个block里面$/;"	m	struct:Seg_sum_bk
 log_bk_no	log.h	/^    u_int log_bk_no;$/;"	m	struct:LogAddress
+log_bk_no	log.h	/^    u_int log_bk_no;$/;"	m	struct:Log_Block
 log_bk_no	log.h	/^    u_int log_bk_no;$/;"	m	struct:Seg_sum_entry
 log_bk_no	log1.h	/^        u_int log_bk_no;$/;"	m	struct:LogAddress
 log_bk_no	log1.h	/^    u_int log_bk_no;$/;"	m	struct:Inode_location
+log_bk_size	mklfs.c	/^u_int log_bk_size;$/;"	v
+log_bks_per_seg	mklfs.c	/^u_int log_bks_per_seg;$/;"	v
 log_seg_no	log.h	/^    u_int log_seg_no;$/;"	m	struct:LogAddress
 log_seg_no	log.h	/^    u_int log_seg_no;$/;"	m	struct:Seg
 log_seg_no	log.h	/^    u_int log_seg_no;$/;"	m	struct:Super_log_seg
 log_seg_no	log1.h	/^	u_int log_seg_no;$/;"	m	struct:LogAddress
 log_seg_no	log1.h	/^    u_int log_seg_no;$/;"	m	struct:Inode_location
 log_seg_num	log.h	/^    u_int log_seg_num;$/;"	m	struct:Super_log_seg
+log_seg_size	mklfs.c	/^u_int log_seg_size;$/;"	v
 magic	flash.c	/^    char        magic[8];          \/\/ "FLASH"$/;"	m	struct:FlashHeader	file:
 magic	lfs/flash.c	/^    char        magic[8];          \/\/ "FLASH"$/;"	m	struct:FlashHeader	file:
-main	hello.c	/^int main(int argc, char *argv[])$/;"	f
 main	lfstest.py	/^def main(args):$/;"	f
 main	mklfs.c	/^int main(int argc, char *argv[])$/;"	f
+mode	log.h	/^    int mode;$/;"	m	struct:Inode
 mode	log.h	/^    mode_t mode;$/;"	m	struct:Inode
 mode	log1.h	/^    int mode;$/;"	m	struct:Inode
 modify_Time	log.h	/^    time_t modify_Time;$/;"	m	struct:Inode
@@ -270,8 +307,14 @@ modify_Time	log1.h	/^    time_t modify_Time;$/;"	m	struct:Inode
 modify_Time	log1.h	/^    time_t modify_Time;$/;"	m	struct:Seg_usage_table
 name	log.h	/^    char * name;$/;"	m	struct:Ifile
 next	log.h	/^    Seg *next;  $/;"	m	struct:Super_log_seg
+next	log.h	/^    Seg *next;  $/;"	v
 next	log.h	/^    struct Disk_cache * next;$/;"	m	struct:Disk_cache	typeref:struct:Disk_cache::Disk_cache
+next	log.h	/^    struct Fl_Block * next;$/;"	m	struct:Fl_Block	typeref:struct:Fl_Block::Fl_Block
+next	log.h	/^    struct Fl_Seg * next;$/;"	m	struct:Fl_Seg	typeref:struct:Fl_Seg::Fl_Seg
 next	log.h	/^    struct Inode_location * next;$/;"	m	struct:Inode_location	typeref:struct:Inode_location::Inode_location
+next	log.h	/^    struct Log_Block * next;$/;"	m	struct:Log_Block	typeref:struct:Log_Block::Log_Block
+next	log.h	/^    struct Seg * next;$/;"	m	struct:Seg	typeref:struct:Seg::Seg
+next	log.h	/^    struct Seg_sum_entry * next;$/;"	m	struct:Seg_sum_entry	typeref:struct:Seg_sum_entry::Seg_sum_entry
 next	log1.h	/^    struct Inode_map_list* next;$/;"	m	struct:Inode_map_list	typeref:struct:Inode_map_list::Inode_map_list
 num_links	log.h	/^    int num_links;$/;"	m	struct:Inode
 num_links	log1.h	/^    int num_links;$/;"	m	struct:Inode
@@ -280,10 +323,12 @@ num_live_bk	log1.h	/^    u_int num_live_bk;$/;"	m	struct:Seg_usage_table
 offset	log.h	/^    u_int offset; $/;"	m	struct:Inode_location
 optparse	lfstest.py	/^import optparse$/;"	i
 os	lfstest.py	/^import os$/;"	i
+pushToDisk	log.c	/^void pushToDisk()$/;"	f
 readOps	flash.c	/^    long long	readOps;$/;"	m	struct:FlashInfo	file:
 readOps	lfs/flash.c	/^    long long	readOps;$/;"	m	struct:FlashInfo	file:
 readSectors	flash.c	/^    long long	readSectors;$/;"	m	struct:FlashInfo	file:
 readSectors	lfs/flash.c	/^    long long	readSectors;$/;"	m	struct:FlashInfo	file:
+read_cache	log.c	/^bool read_cache(Disk_addr disk_addr, u_int length, void * buffer)$/;"	f
 seg_no	log.h	/^    u_int seg_no;$/;"	m	struct:Block_pointer
 seg_no	log1.h	/^    u_int seg_no;$/;"	m	struct:Block_pointer
 seg_no	log1.h	/^    u_int seg_no;$/;"	m	struct:Seg
@@ -296,13 +341,18 @@ seg_sum_entry	log1.h	/^    Seg_sum_entry* seg_sum_entry;$/;"	m	struct:Seg_sum_bk
 seg_usage_table	log.h	/^    Seg_usage_table * seg_usage_table;$/;"	m	struct:Super_log_seg
 seg_usage_table	log1.h	/^    seg_usage_table[SEG_NUM] seg_usage_table;$/;"	m	struct:log_beginning
 segment_size	log1.h	/^    u_int segment_size = FLASH_BLOCK_SIZE * BLOCKS_PER_SEGMENT;$/;"	m	struct:log_beginning
+segs_per_log	mklfs.c	/^u_int segs_per_log;  \/\/程序员定义$/;"	v
+setLogTail	log.c	/^void setLogTail()$/;"	f
 setUp	lfstest.py	/^    def setUp(self):$/;"	m	class:TestBase
 shutil	lfstest.py	/^import shutil$/;"	i
+ssum_bk	log.h	/^    Seg_sum_bk ssum_bk; $/;"	m	struct:Begin_bk
 stat	lfstest.py	/^import stat$/;"	i
 stateOffset	flash.c	/^    u_int       stateOffset;      \/\/ Offset of sector state array, in bytes.$/;"	m	struct:FlashHeader	file:
 stateOffset	lfs/flash.c	/^    u_int       stateOffset;      \/\/ Offset of sector state array, in bytes.$/;"	m	struct:FlashHeader	file:
 subprocess	lfstest.py	/^import subprocess$/;"	i
+super_log_seg	log.h	/^Super_log_seg * super_log_seg;$/;"	v
 sys	lfstest.py	/^import sys$/;"	i
+tail_log_addr	log.h	/^LogAddress tail_log_addr;$/;"	v
 tearDown	lfstest.py	/^    def tearDown(self):$/;"	m	class:TestBase
 test_00_write_then_read	lfstest.py	/^    def test_00_write_then_read(self):$/;"	m	class:TestBasic
 test_01_write_and_write_and_read	lfstest.py	/^    def test_01_write_and_write_and_read(self):$/;"	m	class:TestBasic

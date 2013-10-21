@@ -1,6 +1,5 @@
 /*
  * dir.h
- * Author: Weng
  * Created on: oct 17, 2013
  * This is the directory layer h code
  */
@@ -16,9 +15,10 @@
 #include "log.h"
 #include "File.h"
 //more need from tianyu
-#define UNDEFINE_FILE -1
+#define ROOT_INO 0
+#define UNDEFINE_FILE -2
 
-int Dir_Layer_Init(char *filename, int cacheSize, int checkPointPeriod); //checkPointPeriod save for Phase 2
+int Dir_Layer_Init(char *filename) //cache and checkPointPeriod save for Phase 2
 
 int Dir_mkdir(const char *dirName, mode_t mode, uid_t, gid_t gid);
 
