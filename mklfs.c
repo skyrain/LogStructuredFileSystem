@@ -7,15 +7,19 @@
 int main(int argc, char *argv[])
 {
     //erase bk size
+    //----------------------还未用---------------
     u_int er_bk_size = 16;   
 
 //用户输入--------------------------------------------    
     //？？之后会作为参数设置,此处为默认值
     //用户输入
     wearlimit = 1000;
+    fl_file = (char *)calloc(1, 8);
     strcpy(fl_file, "File");          //flash memory name
 
+    //-----should always be 16 的整数倍
     sec_num = 1024;
+
     bk_size = 2;
     bks_per_seg = 32;
     seg_size = bks_per_seg * bk_size;
@@ -26,9 +30,6 @@ int main(int argc, char *argv[])
         
     //根据用户输入定义log的相应结构大小
    
-    //程序员定义
-    segs_per_log = 4;  
-    
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
     
     //cache seg 数量，此处为默认值
@@ -36,15 +37,11 @@ int main(int argc, char *argv[])
  //用户输入--------------------------------------------------
 
 
-     
-
-
+//-------------------------------------------------------------
     //create and format flash memory & create log in memory
-    Log_Create(fl_file,fl_wearlimit,
-            fl_sec_num, fl_secs_per_bk, fl_bks_per_seg, segs_per_log);
+    Log_Create();
 
     //create cache: store in dis_cache 
-    create_cache(cache_seg_num, fl_seg_size);
-
+//    create_cache();
 
 }

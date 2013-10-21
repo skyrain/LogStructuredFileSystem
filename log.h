@@ -12,12 +12,144 @@
 
 //#define N_BEGIN_BLOCK 2
 
+
+
+//------------------structure definition---------------------
+
+//----------------------------------------------------
+//-------malloc(bk_size * FLASH_SECTOR_SIZE);
+//------------bk_content 可以存above大小的data
+typedef struct Block
+{
+    //-----存file data------
+    //----可以存的大小为
+    void * bk_content;   
+
+}Block;
+
+//list "bk_no"th block in certain seg
+//it contaiins which file's which file block data
+typedef struct Seg_sum_entry
+{
+    u_int bk_no;
+    u_int file_no;            
+    u_int file_bk_no;
+    struct Seg_sum_entry * next;
+
+}Seg_sum_entry;
+
+//每个seg有 bks_per_seg 个 blocks
+typedef struct Seg_sum_bk
+{
+    //该Seg_sum_bk存在seg的哪一个block里面
+    u_int bk_no;        
+    Seg_sum_entry * seg_sum_entry;
+
+    //之后加入uid用于判断一个seg的某个block是否alive
+    //??
+
+}Seg_sum_bk;
+
+//Suppose only 1 Seg_sum_bk as Begin_bk in Seg
+//---------一个 Begin_bk 占一个block size 大小
+//------malloc(bk_size * FLASH_SECTOR_SIZE)
+typedef struct Begin_bk
+{
+    //Note: Seg_sum_bk starts at the 2nd bk of seg
+    Seg_sum_bk  * ssum_bk; 
+
+}Begin_bk;
+
+//----segment definition----------------
+typedef struct Seg
+{
+    Begin_bk * begin_bk;
+    Block * bk;
+
+}Seg;
+
+typedef struct LogAddress
+{
+    u_int seg_no;
+    u_int bk_no;
+
+}LogAddress;
+
+//for cleaning policy,record segment usage table
+//per segment linked to seg_usage_table
+//检查每一个seg，知道其利用率
+typedef struct Seg_usage_table
+{
+    u_int seg_no;
+
+    //--------- bks that used now in the seg-------
+    u_int num_live_bk;
+    //u_int num_live_bytes; // should not be num of live blocks???
+    
+    time_t modify_time;
+
+    struct Seg_usage_table * next;
+
+}Seg_usage_table;
+
+
+//--------1.addrs of all blocks in the inode map - ifile_no
+//---- ifile contains this info------------------
+//--------2.seg usage table
+//--------3. current time
+//--------4. pointer to the last segment written
+typedef struct Checkpoint_region
+{
+    u_int ifile_ino;
+    Seg_usage_table *seg_usage_table;
+    u_int curr_time;
+    Seg * last_seg_written;
+}Checkpoint;
+
+
+
+
+//super log segment 存整个log的信息和checkpoint等
+typedef struct Super_seg
+{
+    u_int seg_no;
+    u_int seg_num;      
+    u_int seg_size;
+    u_int bk_size;
+ 
+    //----只记录除 super seg 外的data seg的利用率    
+    Seg_usage_table * seg_usage_table;
+    /* 
+     * edited 1 weng 
+     * checkpoint
+     * Flash
+     */
+    //??checkpoint还没定义
+    Checkpoint * checkpoint;
+
+}Super_seg;
+
+
+//大小以flash memory的seg为单位
+typedef struct Disk_cache
+{
+    u_int cache_no;
+
+    //this cache is from which seg
+    Seg * seg;
+
+    u_int IS_JUST_UPDATE;
+
+    struct Disk_cache * next;
+
+}Disk_cache;
+
 //----------------gloabal value-----------------------
-Super_log_seg * super_seg;
+Super_seg * super_seg;
 Disk_cache * disk_cache;
 
 //-------points to the logAddress that could start to write data-------
-LogAddress tail_log_addr;
+LogAddress * tail_log_addr;
 
 u_int wearlimit;
 
@@ -55,135 +187,6 @@ u_int cache_seg_num;
 
 
 
-//------------------structure definition---------------------
-
-//----------------------------------------------------
-//-------malloc(bk_size * FLASH_SECTOR_SIZE);
-//------------bk_content 可以存above大小的data
-typedef struct Block
-{
-    //-----存file data------
-    //----可以存的大小为
-    void * bk_content;   
-
-}Block;
-
-//list "bk_no"th block in certain seg
-//it contaiins which file's which file block data
-typedef struct Seg_sum_entry
-{
-    u_int bk_no;
-    u_int file_no;            
-    u_int file_bk_no;
-
-    struct Seg_sum_entry * next;
-
-}Seg_sum_entry;
-
-//每个seg有 bks_per_seg 个 blocks
-typedef struct Seg_sum_bk
-{
-    //该Seg_sum_bk存在seg的哪一个block里面
-    u_int bk_no;        
-    Seg_sum_entry * seg_sum_entry;
-
-    //之后加入uid用于判断一个seg的某个block是否alive
-    //??
-
-}Seg_sum_bk;
-
-//Suppose only 1 Seg_sum_bk as Begin_bk in Seg
-//---------一个 Begin_bk 占一个block size 大小
-//------malloc(bk_size * FLASH_SECTOR_SIZE)
-typedef struct Begin_bk
-{
-    //Note: Seg_sum_bk starts at the 2nd bk of seg
-    Seg_sum_bk ssum_bk; 
-
-}Begin_bk;
-
-//----segment definition----------------
-typedef struct Seg
-{
-    Begin_bk begin_bk;
-    Block * bk;
-
-}Seg;
-
-typedef struct LogAddress
-{
-    u_int seg_no;
-    u_int bk_no;
-
-}LogAddress;
-
-//for cleaning policy,record segment usage table
-//per segment linked to seg_usage_table
-//检查每一个seg，知道其利用率
-typedef struct Seg_usage_table
-{
-    u_int seg_no;
-
-    //--------- bks that used now in the seg-------
-    u_int num_live_bk;
-    //u_int num_live_bytes; // should not be num of live blocks???
-    
-    time_t modify_Time;
-}Seg_usage_table;
-
-
-//--------1.addrs of all blocks in the inode map - ifile_no
-//---- ifile contains this info------------------
-//--------2.seg usage table
-//--------3. current time
-//--------4. pointer to the last segment written
-typedef struct Checkpoint_region
-{
-    u_int ifile_ino;
-    Seg_usage_table *seg_usage_table;
-    u_int curr_time;
-    Seg * last_seg_written;
-}Checkpoint;
-
-
-
-
-//super log segment 存整个log的信息和checkpoint等
-typedef struct Super_seg
-{
-    u_int seg_no;
-    u_int seg_num;      
-    u_int seg_size;
-    u_int bk_size;
-    
-    Seg_usage_table * seg_usage_table;
-    /* 
-     * edited 1 weng 
-     * checkpoint
-     * Flash
-     */
-    //??checkpoint还没定义
-    Checkpoint * checkpoint;
-
-}Super_seg;
-
-
-//大小以flash memory的seg为单位
-typedef struct Disk_cache
-{
-    u_int cache_no;
-
-    //this cache is from which seg
-    Seg * seg;
-
-    u_int IS_JUST_UPDATE;
-
-    struct Disk_cache * next;
-
-}Disk_cache;
-
-
-//    Flash *flash;
 
 //-------------------method------------------------------------//
 
