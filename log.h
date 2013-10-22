@@ -6,6 +6,11 @@
 #include <time.h>
 #include <sys/types.h>
 
+#define bool int
+#define false 0
+#define true 1
+
+
 #define DIRECT_BK_NUM 4
 #define FILE_NAME_LENGTH 8
 //#define BLOCK_SIZE FLASH_BLOCK_SIZE // temp for file layer test
