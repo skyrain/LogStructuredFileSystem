@@ -123,12 +123,12 @@ int Log_Create()
     //---------------------------------------------------------------
     for(i = 1; i < seg_num; i++)
     {
-//        Seg * tmp = (Seg *)calloc(1, sizeof(Seg));
 
         Begin_bk * tmp_bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
 
-//        tmp->begin_bk = tmp_bb;
         //--------begin bk----------------------------------
+        tmp_bb->seg_no = i;
+
         Seg_sum_bk * ssum = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
         tmp_bb->ssum_bk = ssum;
         ssum->bk_no = 0;
@@ -179,29 +179,23 @@ int Log_Create()
     return 0;
 }
 
-/*
-
-
 //---------------create cache---------------------------------------
-//---------------input: fl_seg_size: in sectors--------------
-int create_cache(u_int seg_num, u_int fl_seg_size)
+int create_cache()
 {
-    Disk_cache *cache_start = (Disk_cache *)calloc(sizeof(Disk_cache));
+    Disk_cache *cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
     cache_start->cache_no = 0;
-    cache_start->fl_seg_no = -1;
-    cache_start->content = calloc(fl_seg_size * FLASH_SECTOR_SIZE);
+    cache_start->seg = (Seg *)calloc(1, sizeof(Seg));
     cache_start->IS_JUST_UPDATE = false;
     cache_start->next = NULL;
 
     disk_cache = cache_start;
 
     u_int i;
-    for(i = 1; i < seg_num; i++)
+    for(i = 1; i < cache_seg_num; i++)
     {
-        Disk_cache * tmp = (Disk_cache *)calloc(sizeof(Disk_cache));
+        Disk_cache * tmp = (Disk_cache *)calloc(1, sizeof(Disk_cache));
         tmp->cache_no = i;
-        tmp->fl_seg_no = -1;
-        tmp->content = calloc(fl_seg_size * FLASH_SECTOR_SIZE);
+        tmp->seg = (Seg *)calloc(1, sizeof(Seg));
         tmp->IS_JUST_UPDATE = false;
         tmp->next = NULL;
 
@@ -213,40 +207,71 @@ int create_cache(u_int seg_num, u_int fl_seg_size)
     return 0;   
 }
 
+//----------help identify the minimum # of bks --------------
+//-------- for the length(in bytes)--------------------------
+u_int length_in_bk(u_int len) 
+{
+    u_int bks_count = 0;
+    while(bks_count * bk_size * FLASH_SECTOR_SIZE <= len)
+    {
+        bks_count++;
+    }
+
+    return bks_count;
+}
+
+
 
 //-----------------read_cache----------------------------------
-//--- ??  input: length in bytes
 //------- input: buffer only need to be a pointer
-//--------length  = the size of block--------------------------
-bool read_cache(Disk_addr disk_addr, u_int length, void * buffer)
+//--------- now file layer only give me length = 1 block data in bytes--------
+//---------for file layer simplicity--------------------------------------
+//-------- now this func can deal with length could be > 1 block data in bytes------------
+bool read_cache(LogAddress * log_addr, u_int length, void * buffer)
 {
-    buffer = calloc(length);
+    buffer = calloc(1, length);
+    u_int offset = 0;
+
     bool IS_IN_CACHE = false;
 
-    //blocks remain in first seg
-    u_int bks_remain = fl_bks_per_seg - disk_addr.fl_bk_no;
+    //blocks remain in 1st seg
+    u_int bks_remain = bks_per_seg - log_addr.bk_no;
   
-    u_int bks_tobe_read = length / FLASH_SECTORS_SIZE / fl_secs_per_bk;
+    u_int bks_tobe_read = length_in_bk(length);
     
-    u_int bytes_filled = 0;
+    Disk_cache * cache_walker = disk_cache;
 
-    Disk_cache cache_walker = disk_cache;
     while(cache_walker != NULL)
     {
-        //If the input disk_addr's seg no is in the cache
-        if(disk_addr->fl_seg_no == cache_walker->fl_seg_no)
+        //If the input log_addr's seg no is in the cache
+        if(log_addr->seg_no == cache_walker->seg->begin_bk.seg_no)
         {
-            //write data small than data size of bks_remain
-            memcpy(buffer, cache_walker->content
-                    + disk_addr->fl_bk_no * fl_bk_size, 
-                    length);
+            //---if all data stored in the same seg--------------
+            if(bks_tobe_read <= bks_remain)
+            {
+                //write data smaller than data size of bks_remain
+                memcpy(buffer + offset, cache_walker->seg->begin_bk
+                        + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, length);
+                IS_IN_CACHE = true;
+                break;
+            }
+            else
+            {
+                memcpy(buffer + offset, cache_walker->seg->begin_bk
+                        + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE,
+                        bks_remain * bk_size * FLASH_SECTOR_SIZE);
+                offset += bks_remain * bk_size * FLASH_SECTOR_SIZE;
+                length = length - bks_remain * bk_size * FLASH_SECTOR_SIZE;
+                bks_remain = bks_per_seg;
+                bks_tobe_read = length_in_bk(length);
+                log_addr->seg_no++;
+                log_addr->bk_no = 1;
+                cache_walker = disk_cache;
+            }
 
-            IS_IN_CACHE = true;
-            break;
         }
-        
-        cache_walker= cache_walker->next;
-
+        else
+            cache_walker= cache_walker->next;
     }
    
     if(!IS_IN_CACHE)
@@ -260,37 +285,43 @@ bool read_cache(Disk_addr disk_addr, u_int length, void * buffer)
 
 
 
-//input: disk 地址，返回长度为length的dis数据于buffer中
-//Here now: length is always = fl_bk_size
+//input: log_addr 地址，返回长度为length的dis数据于buffer中
+//-------Here now: length is always = bk_size (in bytes)----------
+//-------from file layer-----------------------------------------
+//----but this func is able to read > 1 bk_size data--------------
+//--- if length > 1 bk_size -----------------------------------
 //--------------------不读 Begin block----------------------------
-int Log_Read(Disk_addr disk_addr, u_int length, void * buffer);
+//---------Note: flash memory I/O in unit of segment-------------
+int Log_Read(LogAddress * log_addr, u_int length, void * buffer);
 {
     //attemp to read from cache
     bool IS_IN_CACHE = read_cache(disk_addr, length, buffer)    
     if(IS_IN_CACHE)
         return 0;
 
-    //If not in cache, read data from flash, 
+    //If not in cache, read data from disk, 
     //then store it on cache from the 1st cache seg
     //------------1. read data from flash-----------
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
     
-    u_int tmp = fl_bks_per_seg * super_log_seg->fl_seg_num;
+    u_int tmp = bks_per_seg * super_seg->seg_num;
     u_int * blocks = &tmp;
-    Flash flash = Flash_Open(file, flags, blocks); 
-    
-    u_int sec_offset = disk_addr->fl_seg_no * fl_seg_size;
+    Flash flash = Flash_Open(fl_file, flags, blocks); 
+   
+    u_int sec_offset = log_addr->seg_no * seg_size;
 
     //??need calloc before use buffer to this func? 
-    void * new_buffer;// = malloc(fl_seg_size * FLASH_SECTOR_SIZE);
+    void * new_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     
     //Read the whole seg which contains the data(only 1 bk size)
     Flash_Read(flash, sec_offset, fl_seg_size, new_buffer);
     
+   
     Flash_Close(flash);
 
-    buffer = calloc(fl_bk_size);
+
+    buffer = calloc(1, bk_size);
     memcpy(buffer, new_buffer + disk_addr->fl_bk_no * fl_secs_per_bk, 
             fl_bk_size * FLASH_SECTOR_SIZE);
      
@@ -455,4 +486,4 @@ int Log_Write(u_int inum, u_int block, u_int length,
 
 }
 
-*/
+

@@ -203,7 +203,7 @@ int create_cache();
 //read_cache
 //--return true all data is in cache, read directly from cache--------
 //--return false not all data is in cache, read from disk,then---------
-int read_cache(LogAddress logAddress, u_int length, void * buffer);
+int read_cache(LogAddress  * logAddress, u_int length, void * buffer);
 
 
 /*
@@ -221,7 +221,7 @@ int Log_Create();
 
 //-----------------------------------------------------------
 //input: disk 地址，返回长度为length的dis数据于buffer中
-int Log_Read(LogAddress log_addr, u_int length, void * buffer);
+int Log_Read(LogAddress * log_addr, u_int length, void * buffer);
 
 
 //-----------------------------------------------------------------
@@ -229,7 +229,7 @@ int Log_Read(LogAddress log_addr, u_int length, void * buffer);
 //----------------------input--------------------------------------
 //--------input: block - bk_no within the file
 int Log_Write(u_int inum, u_int block, u_int length,
-         void * buffer, LogAddress logaddr);
+         void * buffer, LogAddress * log_addr);
 
 //--------------------------------------------------------------------
 //释放log中从logAddress开始长度为length的数据,
