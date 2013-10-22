@@ -4,8 +4,9 @@
  * This is the file layer header
  */
 
-#include <sys/types.h>
+//#include <sys/types.h>
 #include "log.h"
+#include <sys/types.h>
 
 /*
  * inode is the inode of the file to be accessed, 
@@ -72,6 +73,6 @@ int File_Read(Inode *inode, int offset, int length, void *buffer);
 
 int File_Free(Inode *inode);
 
-int File_Layer_Init(char *filename, Inode **ifile, int *closestatus);
+int File_Layer_Init(char *filename, Inode **ifile);
 
 void Get_Block_pointer(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);

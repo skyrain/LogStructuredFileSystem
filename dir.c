@@ -5,7 +5,9 @@
  */
 
 #include <sys/time.h>
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <time.h>
 #include "dir.h"
 
@@ -16,7 +18,7 @@ int ifile_length; //number of files currently held in the ifile;
 //Init the Directory layer, as a special file, it needs use
 //File_Layer_Init as well, creat the root directory if not there.
 //read from the ifile's inode
-int Dir_Layer_Init(char *filename)
+int Dir_Layer_Init(char *filename, u_int cachesize)
 {
 	int status = 0;
 	// Init the File layer as well
@@ -71,7 +73,7 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 	status = Get_Inode(path, &myNode);
 	if(status) {printf("openning file fail\n"); return status;}
 
-	fi->fh = myNod->ino;
+	fi->fh = myNode->ino;
 
 	return status;
 }
@@ -101,11 +103,11 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	Get_Inode(dir_name, &dirNode);
 
 	// ADd . and .. to this directory
-	strcpy(currentDir[1]->filename, "..");
+	strcpy(currentDir[1].filename, "..");
 	// if this dir is the root dir then..
 	if(strcmp(dir_name, "/") ==0 )
 	{
-		currentDir[1]->inum = UNDEFINE_FILE;
+		currentDir[1].inum = UNDEFINE_FILE;
 	}
 	else
 	{
@@ -147,7 +149,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 	// Check if file exists unless root
 	if (strcmp(path, "/") != 0){
-		inode *someNode;
+		Inode *someNode;
 		status = Get_Inode(path, &someNode);
 		if (status == 0){
 			printf( "File already exists \n", path);
@@ -167,7 +169,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	status = File_Init(&ifile[inum], S_IFREG);
 	ifile[inum].ino = inum;
 	ifile[inum].mode =  mode;
-	ifile[inum].num_Links = 1;
+	ifile[inum].num_links = 1;
 	ifile[inum].userID = uid;
 	ifile[inum].groupID = gid;
 
@@ -190,6 +192,55 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	}
 
 	return status;
+}
+
+int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
+        			struct fuse_file_info *fi){
+	// path: path of file to read
+	// buf: buffer in which to place file contents
+	// size: how much data would you like to read?
+	// offset: at what offset would you like to start reading?
+	// returns number of bytes read
+	Inode *myNode;
+	int status;
+
+	status = Validate_Inum(fi->fh, (char *) path);
+	if( status ){
+		// Bad Inum, parse the path to get the inode
+		status = Get_Inode(path, &myNode);
+		if( status )
+		{
+			printf("ERROR in dir read file");
+			return status;
+		}
+	}else{
+		// Valid inum, get the inode
+		status = Get_Inode_From_Inum(fi->fh, &myNode);
+		if( status )
+		{
+			printf("ERROR in dir read file");
+			return status;
+		}
+	}
+
+//	debug_print("Printing Inode\n");
+//	printInode(myNode);
+
+	status = File_Read( myNode, offset, size, buf );
+	if( status )
+	{
+		printf("ERROR in dir read file");
+		return status;
+	}
+
+	status = Flush_Ino( myNode->ino );
+	if( status )
+	{
+		printf("ERROR in dir read file");
+		return status;
+	}
+
+	return size;
 }
 
 int Get_Inode(const char *path, Inode **returnNode){
@@ -292,7 +343,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 
 	*returnNode = myNode;
 
-	time( &inode_ifile->accessTime );
+	time( &inode_ifile->access_Time );
 
 	return 0;
 }
@@ -302,7 +353,7 @@ int Flush_Ino(int inum)
 	if(inum >= ifile_length)
 		return -ENOENT;
 
-	return File_Write(inode_ifile, inum*sizeof(inode), sizeof(inode), &ifile[inum]);
+	return File_Write(inode_ifile, inum*sizeof(Inode), sizeof(Inode), &ifile[inum]);
 }
 
 int Add_File_To_Directory(const char *path, int inum)
@@ -318,8 +369,8 @@ int Add_File_To_Directory(const char *path, int inum)
 		return status;
 	}
 
-	currentFile.ino = inum;
-	status =  Dir_Write_file(dirNode, (const char *)&currentFile, sizeof(DirEntry), dirNode->filesize);
+	currentFile.inum = inum;
+	status =  Write_file(dirNode, (const char *)&currentFile, sizeof(DirEntry), dirNode->filesize);
 
 	// check whether write the file correctly, by size
 	if(status != sizeof(DirEntry))
@@ -339,7 +390,51 @@ int Add_File_To_Directory(const char *path, int inum)
 	return 0;
 }
 
-int Dir_Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
+int Dir_Write_File(const char *path, const char *buf, size_t size, off_t offset,
+			struct fuse_file_info *fi){
+	// path: path of file to read
+	// buf: buffer from which to read file contents
+	// size: how much data would you like to read?
+	// offset: at what offset would you like to start writing?
+	// returns the number of bytes written
+	Inode *myNode;
+	int status;
+
+//	status = _Get_Inode(path, &myNode);
+//	if( status ){
+//		return status;
+//	}
+
+	status = Validate_Inum(fi->fh, (char *) path);
+	if( status ){
+		// Bad Inum, parse the path to get the inode
+		status = Get_Inode(path, &myNode);
+		if( status )
+		{
+			printf("Write file failure \n");
+			return status;
+		}
+	}else{
+		// Valid inum, get the inode
+		status = Get_Inode_From_Inum(fi->fh, &myNode);
+		if( status )
+		{
+			printf("Write file failure \n");
+			return status;
+		}
+	}
+
+	status = Write_file(myNode, buf, size, offset);
+	if( status != size )
+	{
+		printf("Write file failure \n");
+		return status;
+	}
+
+	return size;
+}
+
+int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 {
 	// path: path of the file to read
 	// buf: buffer from which to read file contents
@@ -412,12 +507,21 @@ DirEntry *Get_Dir(Inode *dirNode, int *numfiles){
 
 	status = File_Read( dirNode, 0, dirNode->filesize, dir );
 	if( status ){
-		debug_print("Error in _get_Dir.\n");
+		printf("Error in _get_Dir.\n");
 		return (DirEntry *) NULL;
 	}
 
 	*numfiles = dirNode->filesize / sizeof(DirEntry);
 	return dir;
+}
+
+int Get_Inode_From_Inum(int inum, Inode **returnNode){
+	// This function is provided as a courtesy to lfsck
+	if (inum < ifile_length && inum >= 0){
+		*returnNode = &ifile[inum];
+		return 0;
+	}
+	return -ENOENT;
 }
 
 int Get_New_Ino(){
@@ -444,4 +548,41 @@ int Get_New_Ino(){
 
 	printf("Returning inum %i.  Ifile length is %i.\n", inum, ifile_length);
 	return inum;
+}
+
+int Validate_Inum(int inum, char *path){
+	// This functions takes a path of a file and an inum that is
+	// presumed to be correct for that file and validates correctness
+	// This is for use when the inum is set by Dir_Open_File then
+	// passed through to other functions
+
+	if (inum < 0){
+		return -ENOENT;
+	}
+	if (inum > ifile_length){
+		return -ENOENT;
+	}
+	if (inum == ROOT_INUM && strcmp(path, "/") != 0){
+		return -ENOENT;
+	}
+	return 0;
+}
+
+int Expand_Ifile(int n){
+	// Make the ifile hold n more inodes
+
+	Inode *new_ifile = calloc( 1,(ifile_length + n)*sizeof(Inode) );
+	memcpy(new_ifile, ifile, (ifile_length)*sizeof(Inode) );
+	free(ifile);
+	ifile = new_ifile;
+
+	printf( "ifile_length= %i, new inodes= %i\n", ifile_length, n);
+	ifile_length += n;
+//	status = Flush_Inums( ifile_length - n, n );
+//	printf( "Flush_Inums status: %i\n", status );
+//	if( status ){
+//		return status;
+//	}
+
+	return 0;
 }

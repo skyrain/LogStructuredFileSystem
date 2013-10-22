@@ -11,13 +11,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fuse.h>     
-#include <math.h>     
+#include <math.h> 
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>   
 #include "dir.h"      
 #include "log.h"      
 
 // Initialize FS, return value will pass in the fuse_context to all
 // file operations.
+
+char *filename;
+u_int cachesize;
+
 void *LFS_Init(struct fuse_conn_info *conn)
 {
 	int *status;
@@ -28,7 +34,7 @@ void *LFS_Init(struct fuse_conn_info *conn)
 	{ printf("fail to init\n"); return status;}
 
 	// Init Directory
-	*status = Dir_Layer_Init(filename);
+	*status = Dir_Layer_Init(filename, cachesize);
 	if(*status)
 	{ printf("fail to init\n"); return status;}		
 	
@@ -71,15 +77,14 @@ int LFS_Mkdir(const char *dir_name, mode_t mode)
 	return Dir_mkdir(dir_name, mode, context->uid, context->gid);
 }
 
-static struct fuse_operations LFS_oper =
-{
-        ,init = LFS_Init;
-        ,create = LFS_Create;
-        ,open = LFS_Open;
-	,opendir = LFS_OpenDir;
-	,read = LFS_Read;
-	,write = LFS_Write;
-        ,mkdir = LFS_Mkdir;
+static struct fuse_operations LFS_oper = {
+        .init = LFS_Init,
+        .create = LFS_Create,
+        .open = LFS_Open,
+	.opendir = LFS_OpenDir,
+	.read = LFS_Read,
+	.write = LFS_Write,
+        .mkdir = LFS_Mkdir,
 };
 
 int main(int argc, char *argv[])
@@ -89,7 +94,7 @@ int main(int argc, char *argv[])
         char **nargv = NULL;
 	
 	//print all the arguments
-        for(i=0; i<argc, i++)
+        for(i=0; i<argc; i++)
         {
                 printf("%s\n", argv[i]);
         }
