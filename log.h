@@ -55,6 +55,10 @@ typedef struct Seg_sum_bk
 //------malloc(bk_size * FLASH_SECTOR_SIZE)
 typedef struct Begin_bk
 {
+    //------------contains the seg_no ----------
+    //----------in begin bk---------------------
+    u_int seg_no;
+
     //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk  * ssum_bk; 
 
@@ -217,7 +221,7 @@ int Log_Create();
 
 //-----------------------------------------------------------
 //input: disk 地址，返回长度为length的dis数据于buffer中
-int Log_Read(LogAddress logAddr, u_int length, void * buffer);
+int Log_Read(LogAddress log_addr, u_int length, void * buffer);
 
 
 //-----------------------------------------------------------------
