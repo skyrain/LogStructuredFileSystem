@@ -29,7 +29,7 @@ int Dir_Layer_Init(char *filename); //cache and checkPointPeriod save for Phase 
 
 int Dir_mkdir(const char *dirName, mode_t mode, uid_t, gid_t gid);
 
-int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset);
+int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 
 int Dir_Open_File(const char *path, struct fuse_file_info *fi);
 
@@ -39,7 +39,7 @@ void Dir_layer_De();
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename);
 
-int Dir_Write_File(Inode *myNode, const char *buf, size_t size, off_t offset);
+int Dir_Write_File(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 
 int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset);
 
@@ -54,6 +54,8 @@ int Get_New_Ino();
 int Get_Inode_From_Inum(int inum, Inode **returnNode);
 
 int Validate_Inum(int inum, char *path);
+
+int Expand_Ifile(int n);
 
 DirEntry *Get_Dir(Inode *dirNode, int *numfiles);
 

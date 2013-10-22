@@ -291,7 +291,7 @@ int File_Free(Inode *Ino)
 
 	int status = 0;
 
-	status = File_Drop(Ino, 0);
+	//status = File_Drop(Ino, 0);
 	if(status)
 	{
 		printf("ERROR: when dropping the file");

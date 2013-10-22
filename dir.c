@@ -194,6 +194,55 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	return status;
 }
 
+int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
+        			struct fuse_file_info *fi){
+	// path: path of file to read
+	// buf: buffer in which to place file contents
+	// size: how much data would you like to read?
+	// offset: at what offset would you like to start reading?
+	// returns number of bytes read
+	Inode *myNode;
+	int status;
+
+	status = Validate_Inum(fi->fh, (char *) path);
+	if( status ){
+		// Bad Inum, parse the path to get the inode
+		status = Get_Inode(path, &myNode);
+		if( status )
+		{
+			printf("ERROR in dir read file");
+			return status;
+		}
+	}else{
+		// Valid inum, get the inode
+		status = Get_Inode_From_Inum(fi->fh, &myNode);
+		if( status )
+		{
+			printf("ERROR in dir read file");
+			return status;
+		}
+	}
+
+//	debug_print("Printing Inode\n");
+//	printInode(myNode);
+
+	status = File_Read( myNode, offset, size, buf );
+	if( status )
+	{
+		printf("ERROR in dir read file");
+		return status;
+	}
+
+	status = Flush_Ino( myNode->ino );
+	if( status )
+	{
+		printf("ERROR in dir read file");
+		return status;
+	}
+
+	return size;
+}
+
 int Get_Inode(const char *path, Inode **returnNode){
 	// Get the inode for the path If the path is invalid, throw an error
 	// DirNode is inode ** so it to pass back an address of an inode
@@ -321,7 +370,7 @@ int Add_File_To_Directory(const char *path, int inum)
 	}
 
 	currentFile.inum = inum;
-	status =  Dir_Write_file(dirNode, (const char *)&currentFile, sizeof(DirEntry), dirNode->filesize);
+	status =  Write_file(dirNode, (const char *)&currentFile, sizeof(DirEntry), dirNode->filesize);
 
 	// check whether write the file correctly, by size
 	if(status != sizeof(DirEntry))
@@ -516,5 +565,24 @@ int Validate_Inum(int inum, char *path){
 	if (inum == ROOT_INUM && strcmp(path, "/") != 0){
 		return -ENOENT;
 	}
+	return 0;
+}
+
+int Expand_Ifile(int n){
+	// Make the ifile hold n more inodes
+
+	Inode *new_ifile = calloc( 1,(ifile_length + n)*sizeof(Inode) );
+	memcpy(new_ifile, ifile, (ifile_length)*sizeof(Inode) );
+	free(ifile);
+	ifile = new_ifile;
+
+	printf( "ifile_length= %i, new inodes= %i\n", ifile_length, n);
+	ifile_length += n;
+//	status = Flush_Inums( ifile_length - n, n );
+//	printf( "Flush_Inums status: %i\n", status );
+//	if( status ){
+//		return status;
+//	}
+
 	return 0;
 }

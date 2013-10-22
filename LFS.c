@@ -11,7 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fuse.h>     
-#include <math.h>     
+#include <math.h> 
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>   
 #include "dir.h"      
 #include "log.h"      
