@@ -10,7 +10,7 @@
 #include <math.h>
 #include "File.h"
 #include "log.h"
-
+#include <errno.h>
 
 #define FREE_BLOCK_NUM -1
 #define READ_ERROR -2
@@ -60,7 +60,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		return status;
 
 	// where the file end in block.
-	int BlockSize_byte = BLOCK_SIZE;
+	int BlockSize_byte = bk_size;
 	int FileEndBlock = Ino->filesize / BlockSize_byte;
 	if(Ino->filesize % BlockSize_byte ==0)
 		FileEndBlock--;
@@ -96,7 +96,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 	void *ReadPointer = ReadBuffer;
 
 	// read from log, set the disk addr to read from.
-	Block_pointer BlockPointer;
+	Block_pointer blockPointer;
 	LogAddress LogAddr;
 	int ReadBlockNumber;
 	for(ReadBlockNumber = ReadStartBlock; ReadBlockNumber <= ReadEndBlock; ReadBlockNumber++)
@@ -104,9 +104,9 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		//get pointer to the first block;
 		//read block by block to the ReadBuffer;
 		//get one of the four direct block from the Inode. and cpy to the Block_pointer
-		Get_Block_pointer(Ino, ReadBlockNumber, &BlockPointer);
-		LogAddr.seg_no = BlockPointer.bk_no;
-		LogAddr.bk_no = BlockPointer.seg_no;
+		Get_Block_pointer(Ino, ReadBlockNumber, &blockPointer);
+		LogAddr.seg_no = blockPointer.bk_no;
+		LogAddr.bk_no = blockPointer.seg_no;
 		if(BlockPointer.seg_no != FREE_BLOCK_NUM && BlockPointer.bk_no != FREE_BLOCK_NUM)
 		{
 			status = Log_Read(LogAddr, BlockSize_byte, ReadPointer);
@@ -139,7 +139,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// length to be written in bytes
 	
 	int status = 0;
-	int BlockSize_byte = BLOCK_SIZE;
+	int BlockSize_byte = bk_size;
 
 	// next define where start to write, if offset out of range
 	// write at the last block of the file
@@ -172,8 +172,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	
 	// start to copy part of blocks of data into the temp buffer, at first we need to 
 	// read some orginal data from the disk. start at writeStartBlock to readEndBlock
-	LogAddr firstBlockAddr;
-	LogAddr lastBlockAddr;
+	LogAddress firstBlockAddr;
+	LogAddress lastBlockAddr;
 	if( fileEndBlock >= writeStartBlock)
 	{
 		int readEndBlock;
@@ -183,10 +183,10 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 			readEndBlock = fileEndBlock;
 		
 		//set a pointer to the first block to write
-		Block_Pointer blockPointer;
+		Block_pointer blockPointer;
 		Get_Block_pointer(Ino, writeStartBlock, &blockPointer);
-		firstBlockAddr.fl_seg_no = blockPointer.seg_no;
-		firstBlockAddr.fl_bk_no = blockPointer.bk_no;
+		firstBlockAddr.seg_no = blockPointer.seg_no;
+		firstBlockAddr.bk_no = blockPointer.bk_no;
 		// read the block to write buffer
 		status = Log_Read(firstBlockAddr, BlockSize_byte, writeBuffer);
 		if(status)
@@ -199,8 +199,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		{
 			// set a pointer to the last block
 			Get_Block_pointer(Ino, readEndBlock, &blockPointer);
-			lastBlockAddr.fl_seg_no = blockPointer.seg_no;
-			lastBlockAddr.fl_bk_no = blockPointer.bk_no;
+			lastBlockAddr.seg_no = blockPointer.seg_no;
+			lastBlockAddr.bk_no = blockPointer.bk_no;
 			status = Log_Read(lastBlockAddr, BlockSize_byte, writeBuffer + (numBlocks-1)*BlockSize_byte);
 			if(status)
 			{
@@ -217,11 +217,12 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 	// Log_Write of block one by one and buffer one by one.
 	int writeBlock;
-	Disk_addr AddrWrite;
+	LogAddress AddrWrite;
 	for(writeBlock = 0; writeBlock < numBlocks; writeBlock ++ )
 	{ 	
 		// write the orginal file which file block number is AddrWrite.bk_no
 		// to the tail of the segment
+		Block_pointer blockPointer;
 		Get_Block_pointer(Ino, writeBlock, &blockPointer);
 		AddrWrite.seg_no = blockPointer.seg_no;
 		AddrWrite.bk_no = blockPointer.bk_no;
@@ -252,19 +253,20 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 	//update inode, File layer tought we  write something on the disk, so it should update
 	// the disk locations into inode ---???---
-	if(length + offset > Inode->filesize)
+	if(length + offset > Ino->filesize)
 	{
-		Inode->filesize = offset + length;
+		Ino->filesize = offset + length;
 	}
 	
+	int i;
 	for(i=0; i < numBlocks; i++)
 	{
 		int fileBlockNum = writeStartBlock + i;
 
-		if( fileBlockNum < Direct_bk)
+		if( fileBlockNum < DIRECT_BK_NUM)
 		{
-			Inode->direct_bk[fileBlockNum].seg_no = // neaw tail log addr or  disk addr
-			Inode->direct_bk[fileBlockNum].bk_no = // new 
+			Ino->direct_bk[fileBlockNum].seg_no = tailaddr.seg_no;
+			Ino->direct_bk[fileBlockNum].bk_no = tailaddr.bk_no;
 		}
 		// else , indirect block phase 2 ---???---
 		
@@ -272,8 +274,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 	time_t t;
 	time(&t);
-	Inode->access_Time = t;
-	Inode->change_Time = t;
+	Ino->access_Time = t;
+	Ino->change_Time = t;
 
 	free(writeBuffer);
 	free(blockPointer);
@@ -335,7 +337,7 @@ int File_Drop(Inode *Ino, int offset)
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
-int File_Layer_Init(char *filename, inode **ifile)
+int File_Layer_Init(char *filename, Inode **ifile)
 {
 	// filename is the flash file that are going to open, these argument are passed by user, layer to layer.
 	// then we need to read the ifile from the checkpoint to the
@@ -349,7 +351,7 @@ int File_Layer_Init(char *filename, inode **ifile)
 void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *Block_pointer)
 {
 	// beyond the current file
-	if(BlockNumber * BLOCK_SIZE > Ino->filesize  )
+	if(BlockNumber * bk_size > Ino->filesize  )
 	{
 		Block_pointer->seg_no = FREE_BLOCK_NUM;
 		Block_pointer->bk_no = FREE_BLOCK_NUM;

@@ -22,7 +22,7 @@ typedef struct Block_pointer
 {
     //------- file bk size in sectors--------
     //------actually in flash memory: 1 sector is its 1 block-------
-    int seg_num;
+    int seg_no;
     int bk_no;
 }Block_pointer;
 
@@ -42,7 +42,6 @@ typedef struct Inode
     //Bk_list indirect_bk;
     //Block_pointer indirect_bk;  phase 2
    
-    int mode;
     mode_t mode;
     uid_t userID;
     gid_t groupID;

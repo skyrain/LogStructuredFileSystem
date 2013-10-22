@@ -360,7 +360,7 @@ int Dir_Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 	return size;
 }
 
-int Get_Dir_Inode(const char *path, inode **returnNode, char *filename){
+int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
         // Gets the directory that contains the file/dir specified by path
   
         int status = 0;  
