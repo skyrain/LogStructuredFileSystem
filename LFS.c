@@ -13,7 +13,7 @@
 #include <fuse.h>     
 #include <math.h>     
 #include <string.h>   
-#include "Dir.h"      
+#include "dir.h"      
 #include "log.h"      
 
 // Initialize FS, return value will pass in the fuse_context to all
@@ -68,19 +68,19 @@ int LFS_Write(const char *path, const char *buf, size_t size, off_t offset, stru
 int LFS_Mkdir(const char *dir_name, mode_t mode)
 {
 	struct fuse_context *context = fuse_get_context();
-	return Dir_mkdir(dir_name, mode, context->uid, contex->gid);
+	return Dir_mkdir(dir_name, mode, context->uid, context->gid);
 }
 
 static struct fuse_operations LFS_oper =
 {
-        ,init = LFS_init;
+        ,init = LFS_Init;
         ,create = LFS_Create;
         ,open = LFS_Open;
 	,opendir = LFS_OpenDir;
 	,read = LFS_Read;
 	,write = LFS_Write;
         ,mkdir = LFS_Mkdir;
-}
+};
 
 int main(int argc, char *argv[])
 {

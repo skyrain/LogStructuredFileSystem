@@ -30,7 +30,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 void Dir_layer_De();
 
-int Get_Dir_Inode(const char *path, inode **returnNode, char *filename);
+int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename);
 
 int Dir_Write_file(Inode *myNode, const char *buf, size_t size, off_t offset);
 
