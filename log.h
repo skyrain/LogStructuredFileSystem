@@ -6,6 +6,11 @@
 #include <time.h>
 #include <sys/types.h>
 
+#define bool int
+#define false 0
+#define true 1
+
+
 #define DIRECT_BK_NUM 4
 #define FILE_NAME_LENGTH 8
 //#define BLOCK_SIZE FLASH_BLOCK_SIZE // temp for file layer test
@@ -155,6 +160,9 @@ Disk_cache * disk_cache;
 //-------points to the logAddress that could start to write data-------
 LogAddress * tail_log_addr;
 
+Seg * seg_in_memory;
+
+
 u_int wearlimit;
 
 //----flash memory name---------------
@@ -234,6 +242,6 @@ int Log_Write(u_int inum, u_int block, u_int length,
 //--------------------------------------------------------------------
 //释放log中从logAddress开始长度为length的数据,
 //--free 最小blocks数 which cover the length
-int Log_Free(LogAddress logAddress, u_int length);
+int Log_Free(LogAddress * log_addr, u_int length);
 
 #endif
