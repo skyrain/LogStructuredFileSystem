@@ -1,6 +1,5 @@
 /*
  * File.c
- * Author: Weng
  * Created on: oct 11, 2013
  * This is the file layer c code
  */
@@ -98,7 +97,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 
 	// read from log, set the disk addr to read from.
 	Block_pointer BlockPointer;
-	Disk_addr diskAddr;
+	LogAddress LogAddr;
 	int ReadBlockNumber;
 	for(ReadBlockNumber = ReadStartBlock; ReadBlockNumber <= ReadEndBlock; ReadBlockNumber++)
 	{
@@ -106,11 +105,11 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		//read block by block to the ReadBuffer;
 		//get one of the four direct block from the Inode. and cpy to the Block_pointer
 		Get_Block_pointer(Ino, ReadBlockNumber, &BlockPointer);
-		diskAddr.fl_seg_no = BlockPointer.bk_no;
-		diskAddr.fl_bk_no = BlockPointer.seg_no;
+		LogAddr.seg_no = BlockPointer.bk_no;
+		LogAddr.bk_no = BlockPointer.seg_no;
 		if(BlockPointer.seg_no != FREE_BLOCK_NUM && BlockPointer.bk_no != FREE_BLOCK_NUM)
 		{
-			status = Log_Read(diskAddr, BlockSize_byte, ReadPointer);
+			status = Log_Read(LogAddr, BlockSize_byte, ReadPointer);
 			if(status)
 			{
 				return status;
@@ -173,8 +172,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	
 	// start to copy part of blocks of data into the temp buffer, at first we need to 
 	// read some orginal data from the disk. start at writeStartBlock to readEndBlock
-	Disk_addr firstBlockDiskAddr;
-	Disk_addr lastBlockDiskAddr;
+	LogAddr firstBlockAddr;
+	LogAddr lastBlockAddr;
 	if( fileEndBlock >= writeStartBlock)
 	{
 		int readEndBlock;
@@ -186,10 +185,10 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		//set a pointer to the first block to write
 		Block_Pointer blockPointer;
 		Get_Block_pointer(Ino, writeStartBlock, &blockPointer);
-		firstBlockDiskAddr.fl_seg_no = blockPointer.seg_no;
-		firstBlockDiskAddr.fl_bk_no = blockPointer.bk_no;
+		firstBlockAddr.fl_seg_no = blockPointer.seg_no;
+		firstBlockAddr.fl_bk_no = blockPointer.bk_no;
 		// read the block to write buffer
-		status = Log_Read(firstBlockDiskAddr, BlockSize_byte, writeBuffer);
+		status = Log_Read(firstBlockAddr, BlockSize_byte, writeBuffer);
 		if(status)
 		{
 			printf("error, fail to read the first block the file in log\n");
@@ -200,9 +199,9 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		{
 			// set a pointer to the last block
 			Get_Block_pointer(Ino, readEndBlock, &blockPointer);
-			lastBlockDiskAddr.fl_seg_no = blockPointer.seg_no;
-			lastBlockDiskAddr.fl_bk_no = blockPointer.bk_no;
-			status = Log_Read(lastBlockDiskAddr, BlockSize_byte, writeBuffer + (numBlocks-1)*BlockSize_byte);
+			lastBlockAddr.fl_seg_no = blockPointer.seg_no;
+			lastBlockAddr.fl_bk_no = blockPointer.bk_no;
+			status = Log_Read(lastBlockAddr, BlockSize_byte, writeBuffer + (numBlocks-1)*BlockSize_byte);
 			if(status)
 			{
 				printf("error, fail to read the file's last block in log \n");
@@ -218,14 +217,17 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 	// Log_Write of block one by one and buffer one by one.
 	int writeBlock;
-	Disk_addr diskAddr;
+	Disk_addr AddrWrite;
 	for(writeBlock = 0; writeBlock < numBlocks; writeBlock ++ )
 	{ 	
+		// write the orginal file which file block number is AddrWrite.bk_no
+		// to the tail of the segment
 		Get_Block_pointer(Ino, writeBlock, &blockPointer);
-		diskAddr.seg_no = blockPointer.seg_no;
-		diskAddr.bk_no = blockPointer.bk_no;
+		AddrWrite.seg_no = blockPointer.seg_no;
+		AddrWrite.bk_no = blockPointer.bk_no;
+		LogAddress *tailaddr = tail_log_addr;
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
-		status  = Log_Write(Ino->ino, diskAddr.bk_no, BlockSize_byte, writePointer, diskAddr);
+		status  = Log_Write(Ino->ino, AddrWrite.bk_no, BlockSize_byte, writePointer, tailaddr);
 		if(status)
 		{
 			printf("fail to write on the log, Log_Write\n");
@@ -233,7 +235,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		}
 	}
 
-	//change seg usage table ---???---
+/*--------------------------------------------change seg usage table
 	Block_pointer *blockBuffer = NULL;
 	int i;
 	for(i = 0; i < numBlocks; i++)
@@ -245,8 +247,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 				//update segment usage table ---???---
 		}
 		// else read from the indirect block , phase 2 ---???---
-
 	}
+------------------------------------------------------------------*/
 
 	//update inode, File layer tought we  write something on the disk, so it should update
 	// the disk locations into inode ---???---
@@ -261,7 +263,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 		if( fileBlockNum < Direct_bk)
 		{
-			Inode->direct_bk[fileBlockNum].seg_no = // new
+			Inode->direct_bk[fileBlockNum].seg_no = // neaw tail log addr or  disk addr
 			Inode->direct_bk[fileBlockNum].bk_no = // new 
 		}
 		// else , indirect block phase 2 ---???---
@@ -299,6 +301,7 @@ int File_Free(Inode *Ino)
 
 }
 
+/*
 int File_Drop(Inode *Ino, int offset)
 {
 	Block_pointer *BlockBuffer = NULL;
@@ -327,12 +330,19 @@ int File_Drop(Inode *Ino, int offset)
 
 	}
 }
+*/
+
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
-int File_Layer_Init()
+int File_Layer_Init(char *filename, inode **ifile)
 {
-	return Log_Init();
+	// filename is the flash file that are going to open, these argument are passed by user, layer to layer.
+	// then we need to read the ifile from the checkpoint to the
+	// memory, please return like:*ifile = &(Log.checkPoint.ifile)
+	// in phase 2, we need add more argument for lfs [option], 
+	// such as cachesize and the interval of checkpoint time.
+	return Log_Init(filename, ifile /* other arguement in phase 2*/);
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.
