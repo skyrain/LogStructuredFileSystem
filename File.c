@@ -15,7 +15,7 @@
 #define FREE_BLOCK_NUM -1
 #define READ_ERROR -2
 // temp
-#define BLOCK_SIZE LOG_BK_SIZE
+#define BLOCK_SIZE BK_CONTENT_SIZE
 
 //extern Log_Read(u_int disk_seg, u_int disk_bk_no, u_int length, void *buffer); 
 
@@ -60,7 +60,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		return status;
 
 	// where the file end in block.
-	int BlockSize_byte = bk_size;
+	int BlockSize_byte = BLOCK_SIZE;
 	int FileEndBlock = Ino->filesize / BlockSize_byte;
 	if(Ino->filesize % BlockSize_byte ==0)
 		FileEndBlock--;
@@ -139,7 +139,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// length to be written in bytes
 	
 	int status = 0;
-	int BlockSize_byte = bk_size;
+	int BlockSize_byte = BLOCK_SIZE;
 
 	// next define where start to write, if offset out of range
 	// write at the last block of the file
@@ -345,14 +345,14 @@ int File_Layer_Init(char *filename, Inode **ifile)
 	// memory, please return like:*ifile = &(Log.checkPoint.ifile)
 	// in phase 2, we need add more argument for lfs [option], 
 	// such as cachesize and the interval of checkpoint time.
-	return Log_Init(filename, ifile /* other arguement in phase 2*/);
+	return Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.
 void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *Block_pointer)
 {
 	// beyond the current file
-	if(BlockNumber * bk_size > Ino->filesize  )
+	if(BlockNumber * BLOCK_SIZE > Ino->filesize  )
 	{
 		Block_pointer->seg_no = FREE_BLOCK_NUM;
 		Block_pointer->bk_no = FREE_BLOCK_NUM;

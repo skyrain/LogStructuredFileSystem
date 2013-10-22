@@ -22,6 +22,7 @@
 // file operations.
 
 char *filename;
+u_int cachesize;
 
 void *LFS_Init(struct fuse_conn_info *conn)
 {
@@ -33,7 +34,7 @@ void *LFS_Init(struct fuse_conn_info *conn)
 	{ printf("fail to init\n"); return status;}
 
 	// Init Directory
-	*status = Dir_Layer_Init(filename);
+	*status = Dir_Layer_Init(filename, cachesize);
 	if(*status)
 	{ printf("fail to init\n"); return status;}		
 	

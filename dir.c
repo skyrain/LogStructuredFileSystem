@@ -18,7 +18,7 @@ int ifile_length; //number of files currently held in the ifile;
 //Init the Directory layer, as a special file, it needs use
 //File_Layer_Init as well, creat the root directory if not there.
 //read from the ifile's inode
-int Dir_Layer_Init(char *filename)
+int Dir_Layer_Init(char *filename, u_int cachesize)
 {
 	int status = 0;
 	// Init the File layer as well
