@@ -3,6 +3,7 @@
 #include "flash.h"
 #include "log.h"
 
+//??----------还没有管 wearlimit-------------------------
 
 int main(int argc, char *argv[])
 {
@@ -42,6 +43,6 @@ int main(int argc, char *argv[])
     Log_Create();
 
     //create cache: store in dis_cache 
-//    create_cache();
+    create_cache();
 
 }
