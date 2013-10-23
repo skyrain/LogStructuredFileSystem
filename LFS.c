@@ -27,6 +27,23 @@ u_int cachesize;
 
 void *LFS_Init(struct fuse_conn_info *conn)
 {
+    fl_file = (char *)calloc(1, 8);
+    strcpy(fl_file, "flashmemory");
+ 
+    //1.2 put super log seg in disk (start from disk first sector)
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
+
+//----?? hard code--------------------------
+    
+    //blocks : # of blocks in the flash
+    sec_num = 1024;
+    u_int tmp = sec_num / 16;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+
+//-----------------------------------------------
+
 	int *status;
 
 	status = (int *)calloc(1, sizeof(int));
@@ -92,7 +109,7 @@ static struct fuse_operations LFS_oper = {
 
 int main(int argc, char *argv[])
 {
-
+/*
     seg_num = 1000;
     bool use_opt = false;
 
@@ -114,14 +131,13 @@ int main(int argc, char *argv[])
                 break;
         }
     }
-    fl_file = (char *)calloc(1, 8);
-    strcpy(fl_file, argv[argc - 1]);
-    cachesize = cache_seg_num;
+ 
+   cachesize = cache_seg_num;
    
     //------------- create cache once the whole system ----------
     //---------- starts to run------------------------------------
     create_cache();
-
+*/
     int i;
     int status = 0;
     char **nargv = NULL;
@@ -131,7 +147,7 @@ int main(int argc, char *argv[])
     {
         printf("%s\n", argv[i]);
     }
-
+/*
     if(use_opt)
     {
         nargv = (char **)malloc((argc - 1)*sizeof(char*));
@@ -150,7 +166,8 @@ int main(int argc, char *argv[])
     }
     else
     {
-/*
+
+
         nargv = (char **)malloc((argc + 1)*sizeof(char*));
 
         nargv[0] = argv[0];
@@ -166,20 +183,25 @@ int main(int argc, char *argv[])
         status = fuse_main(argc + 1, nargv, &LFS_oper, NULL);
         if(status){printf("fuse_main error\n"); return status;}
 */
-
-        nargv = (char **)malloc((argc)*sizeof(char*));
+#define NARGS 3
+        int nargc = argc + NARGS;
+        nargv = (char **)malloc((nargc)*sizeof(char*));
 
         nargv[0] = argv[0];
+        nargv[1] = "-f";
+        nargv[2] = "-s";
+        nargv[3] = "-d";
+
         for(i = 1; i < argc; i++)
         {
-            nargv[i] = argv[i];
+            nargv[i + NARGS] = argv[i];
 
         }
         //---------------?? add mount point--------------------------- 
-        status = fuse_main(argc, nargv, &LFS_oper, NULL);
+        status = fuse_main(nargc, nargv, &LFS_oper, NULL);
         if(status){printf("fuse_main error\n"); return status;}
         
-    }
+//    }
 
 
 
