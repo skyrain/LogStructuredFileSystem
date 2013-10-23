@@ -44,7 +44,7 @@ void *LFS_Init(struct fuse_conn_info *conn)
 
 int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
-    int status;
+    int status = 0;
     struct fuse_context* context = fuse_get_context();
     Dir_Create_File(path, mode, context->uid, context->gid, fi);
     LFS_Open(path, fi);
@@ -139,6 +139,8 @@ int main(int argc, char *argv[])
 
     status = fuse_main(argc+1, nargv, &LFS_oper, NULL);
     if(status){printf("fuse_main error\n"); return status;}
+
+    return 0;
 }
 
 

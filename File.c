@@ -52,7 +52,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 	// offset : where to start reading in bytes
 	// length : in bytes
 	// buffer is where to fill the data in
-	int status;
+	int status = 0;
 
 	if (length == 0)
 		return status;
@@ -113,7 +113,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 			if(status)
 			{
 				return status;
-				print("Log_Read fail\n");
+				printf("Log_Read fail\n");
 			}
 
 			printf("Reading the file %i: \n", Ino->ino);

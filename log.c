@@ -3,6 +3,8 @@
 #include "flash.h"
 #include "log.h"
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 /*
  *
@@ -35,7 +37,7 @@ int Log_Create()
     //----------------- super  seg      ----------------------------
     //---------------------------------------------------------------
     //format flash file as segment(same size as log seg)
-    u_int seg_size_bytes = FLASH_SECTOR_SIZE * seg_size;
+//    u_int seg_size_bytes = FLASH_SECTOR_SIZE * seg_size;
   
     //1.store Super log seg in flash memory's 1st seg
     //1.1 create super log seg 
@@ -85,8 +87,8 @@ int Log_Create()
     strcpy(tmp_inode->filename, "ifile");
     for(i = 0; i < DIRECT_BK_NUM; i++)
     {
-        direct_bk.seg_no = -1;
-        direct_bk.bk_no = -1;
+        tmp_inode->direct_bk[i].seg_no = -1;
+        tmp_inode->direct_bk[i].bk_no = -1;
     }
     tmp_inode->mode = 0;
     tmp_inode->userID = getuid();
@@ -602,6 +604,8 @@ int Log_Write(u_int inum, u_int block, u_int length,
     writeToLog(inum, block, buffer, log_addr);
     pushToDisk(log_addr);
     setLogTail();
+
+    return 0;
 }
 
 
@@ -630,9 +634,12 @@ int Log_Free(LogAddress * log_addr, u_int length)
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     Flash_Erase(flash, offset, erase_bks);
     Flash_Close(flash);
+
+    return 0;
 }
 
 int Log_Init(char * filename, Inode ** ifile, u_int cachesize)
 {
      ifile = &(super_seg->checkpoint->ifile); 
+     return 0;
 }

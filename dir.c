@@ -152,7 +152,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 		Inode *someNode;
 		status = Get_Inode(path, &someNode);
 		if (status == 0){
-			printf( "File already exists \n", path);
+			printf( "File already exists \n");
 			return -EEXIST;
 		}
 	}
