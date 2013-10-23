@@ -25,7 +25,7 @@ int main(int argc, char * argv[])
 //??
     //------------file layer 设置 cache---------------    
     //cache seg 数量，此处为默认值
-    cache_seg_num = 4; 
+//    cache_seg_num = 4; 
 
 /*  
   mklfs [options] file
@@ -119,6 +119,6 @@ int main(int argc, char * argv[])
 
     //------------called in LFS.c --------------------------
     //create cache: store in dis_cache 
-    create_cache();
+//    create_cache();
 
 }

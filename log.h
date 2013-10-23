@@ -102,6 +102,44 @@ typedef struct Seg_usage_table
 }Seg_usage_table;
 
 
+//contains direct block info in disk
+typedef struct Block_pointer
+{
+    //------- file bk size in sectors--------
+    //------actually in flash memory: 1 sector is its 1 block-------
+    int seg_no;
+    int bk_no;
+}Block_pointer;
+
+
+typedef struct Inode
+{
+    u_int ino;
+
+    //    u_int seg_no_in_log;//this inode is stored in which seg of log
+    //    u_int bk_no_in_log;//this inode is stored in which block of log
+    u_int filetype;
+    u_int filesize;
+    char filename[FILE_NAME_LENGTH + 1]; //phase 1
+
+    //flash address of the inode's blocks
+    Block_pointer direct_bk[DIRECT_BK_NUM];
+    //Bk_list indirect_bk;
+    //Block_pointer indirect_bk;  phase 2
+
+    mode_t mode;
+    uid_t userID;
+    gid_t groupID;
+    time_t modify_Time;
+    time_t access_Time;
+    time_t create_Time;
+    time_t change_Time;
+    int num_links;
+
+}Inode;
+
+
+
 //--------1.addrs of all blocks in the inode map - ifile_no
 //---- ifile contains this info------------------
 //--------2.seg usage table
@@ -109,7 +147,7 @@ typedef struct Seg_usage_table
 //--------4. pointer to the last segment written
 typedef struct Checkpoint_region
 {
-    u_int ifile_ino;
+    Inode * ifile;
     Seg_usage_table *seg_usage_table;
     u_int curr_time;
     Seg * last_seg_written;
@@ -244,4 +282,7 @@ int Log_Write(u_int inum, u_int block, u_int length,
 //--free 最小blocks数 which cover the length
 int Log_Free(LogAddress * log_addr, u_int length);
 
+
+
+int Log_Init(char* filename, Inode ** ifile, u_int cachesize);
 #endif

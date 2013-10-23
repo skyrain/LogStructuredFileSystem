@@ -76,8 +76,35 @@ int Log_Create()
    
     s_seg->checkpoint = checkpoint;
 
-    checkpoint->ifile_ino = -1;
+
+    Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
+
+    tmp_inode->ino = -1;
+    tmp_inode->filetype = 0;
+    tmp_inode->filesize = 0;
+    strcpy(tmp_inode->filename, "ifile");
+    for(i = 0; i < DIRECT_BK_NUM; i++)
+    {
+        direct_bk.seg_no = -1;
+        direct_bk.bk_no = -1;
+    }
+    tmp_inode->mode = 0;
+    tmp_inode->userID = getuid();
+    tmp_inode->groupID = getgid();
+    time_t t;
+    time(&t);
+    tmp_inode->modify_Time = t;
+    tmp_inode->access_Time = t;
+    tmp_inode->create_Time = t;
+    tmp_inode->change_Time = t;
+    tmp_inode->num_links = 0;
+
+    checkpoint->ifile = tmp_inode;
     
+
+
+
+
     Seg_usage_table * s_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
     s_sut->seg_no = 1;
     s_sut->num_live_bk = 0;
@@ -605,3 +632,7 @@ int Log_Free(LogAddress * log_addr, u_int length)
     Flash_Close(flash);
 }
 
+int Log_Init(char * filename, Inode ** ifile, u_int cachesize)
+{
+     ifile = &(super_seg->checkpoint->ifile); 
+}

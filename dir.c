@@ -23,7 +23,7 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 	int status = 0;
 	// Init the File layer as well
 	// int normalclose; save for the checkpoint roll forward---???---
-	status = File_Layer_Init(filename, &inode_ifile);
+	status = File_Layer_Init(filename, &inode_ifile, cachesize);
 	
 	if(status)
 	{

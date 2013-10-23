@@ -15,7 +15,7 @@
 #define FREE_BLOCK_NUM -1
 #define READ_ERROR -2
 // temp
-#define BLOCK_SIZE BK_CONTENT_SIZE
+#define BLOCK_SIZE bk_content_size
 
 //extern Log_Read(u_int disk_seg, u_int disk_bk_no, u_int length, void *buffer); 
 
@@ -338,7 +338,7 @@ int File_Drop(Inode *Ino, int offset)
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
-int File_Layer_Init(char *filename, Inode **ifile)
+int File_Layer_Init(char *filename, Inode **ifile, u_int cachesize)
 {
 	// filename is the flash file that are going to open, these argument are passed by user, layer to layer.
 	// then we need to read the ifile from the checkpoint to the

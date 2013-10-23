@@ -25,7 +25,7 @@ typedef struct DirEntry
 	int inum;
 }DirEntry;
 
-int Dir_Layer_Init(char *filename); //cache and checkPointPeriod save for Phase 2
+int Dir_Layer_Init(char *filename, u_int cachesize); //cache and checkPointPeriod save for Phase 2
 
 int Dir_mkdir(const char *dirName, mode_t mode, uid_t, gid_t gid);
 
