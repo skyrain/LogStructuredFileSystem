@@ -12,8 +12,7 @@ int main(int argc, char * argv[])
     //----------------------还未用---------------
     u_int er_bk_size = 16;   
 
-    
-    //用户输入--------------------------------------------    
+    //---------------default value----------------------
     wearlimit = 1000;
     fl_file = (char *)calloc(1, 8);
     strcpy(fl_file, "File");         
@@ -27,7 +26,6 @@ int main(int argc, char * argv[])
     //------------file layer 设置 cache---------------    
     //cache seg 数量，此处为默认值
     cache_seg_num = 4; 
-    //用户输入--------------------------------------------------
 
 /*  
   mklfs [options] file
@@ -119,6 +117,7 @@ int main(int argc, char * argv[])
     //create and format flash memory & create log in memory
     Log_Create();
 
+    //------------called in LFS.c --------------------------
     //create cache: store in dis_cache 
     create_cache();
 
