@@ -51,6 +51,8 @@ int Log_Create()
     s_seg->seg_num = seg_num;
     s_seg->seg_size = seg_size;
     s_seg->bk_size = bk_size;
+    s_seg->wearlimit = wearlimit;
+    s_seg->sec_num = sec_num;
 
     Seg_usage_table * start_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
     start_sut->seg_no = 1;
@@ -642,10 +644,7 @@ int Log_Free(LogAddress * log_addr, u_int length)
 int Log_Init(char * filename, Inode * ifile, u_int cachesize)
 {
     //---------calloc memory------------------
-//    filename = (char *)calloc(1, 8);
-    
     Inode* tmp_file = (Inode *)calloc(1, sizeof(Inode));
-
 
     Flash_Flags flags = FLASH_SILENT;
     //blocks : # of blocks in the flash

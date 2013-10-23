@@ -27,7 +27,7 @@ u_int cachesize;
 
 void *LFS_Init(struct fuse_conn_info *conn)
 {
-	int *status;
+    int *status;
 
 	status = (int *)calloc(1, sizeof(int));
 
@@ -88,114 +88,129 @@ static struct fuse_operations LFS_oper = {
     .mkdir = LFS_Mkdir,
 };
 
-//------------------?? need gcc-------------------------------------
 
 int main(int argc, char *argv[])
 {
-/*
-    seg_num = 1000;
-    bool use_opt = false;
-
-    cache_seg_num = 4;
+   
+    int i;
+    int status = 0;
+    char **nargv = NULL;
+    
+    //----------default 1 cache segment----------------
+    cache_seg_num = 1;
+    
     int ch;
     while ((ch = getopt(argc, argv, "s:")) != -1)
     {
         switch (ch) {
             case 's':
-                if(atoi(optarg) > seg_num)
-                {
-                    printf("Too many cache segments!\n");
-                    return 0;
-                }
                 cache_seg_num = (u_int)atoi(optarg);
-                use_opt = true;
                 break;
            case '?':
                 break;
         }
     }
- 
-   cachesize = cache_seg_num;
-   
-    //------------- create cache once the whole system ----------
-    //---------- starts to run------------------------------------
-    create_cache();
-*/
-    int i;
-    int status = 0;
-    char **nargv = NULL;
 
+    //---------------for global variables-------------------------
+    //-----------------------------------------------------------
+    //------from second last argv get the flashmemory name------ 
     filename = (char *)calloc(1, 8);
-    strcpy(filename, "flashmemory");
+    strcpy(filename, argv[argc - 2]);
 
     //print all the arguments
     for(i = 0; i < argc; i++)
     {
         printf("%s\n", argv[i]);
     }
-/*
-    if(use_opt)
+
+    //---------1. -------filename:用于打开disk-------------------
+
+    //----- ??(phase 2) get tail_log_addr--------------
+    //----- get global vairables in log.h---------------
+    char* buffer = get_current_dir_name();
+    char * s = "/config.ini";
+    char * config = (char *)calloc(1, strlen(buffer) + strlen(s));
+    strcpy(config, buffer);
+    strcpy(config + strlen(buffer), s);
+
+    FILE *fp;
+    if((fp=fopen(config,"rb")) == NULL)
     {
-        nargv = (char **)malloc((argc - 1)*sizeof(char*));
-
-        nargv[0] = argv[0];
-        nargv[1] = "-f";
-        
-        for(i = 3; i < argc; i++)
-        {
-            nargv[i - 1] = argv[i];
-
-        }
-        //---------------?? add mount point--------------------------- 
-        status = fuse_main(argc - 1, nargv, &LFS_oper, NULL);
-        if(status){printf("fuse_main error\n"); return status;}
+        printf("\nopen file error");
+        exit(1);
     }
-    else
-    {
+
+    char store_seg_size[5];
+    fgets(store_seg_size, 5, fp);
+    seg_size = (u_int)atoi(store_seg_size);
+   
+    char store_sec_num[5];
+    fgets(store_sec_num, 5, fp);
+ 
+    //------------------if use fclose() 为毛有错 ????------------
+    //---------暂时先不用----------------------------------------
+    //  fclose(fp);
+    sec_num = (u_int)atoi(store_sec_num);
+
+    free(config);
+
+    //--- 2.  read super seg------------------------------- 
+    Flash_Flags flags = FLASH_SILENT;
+
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(filename, flags, blocks);
+
+    //------read super seg into memory-------------------
+    void * super_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    Flash_Read(flash, 0, seg_size, super_seg_buffer); 
 
 
-        nargv = (char **)malloc((argc + 1)*sizeof(char*));
+    //----------for global variables in log.h-----------------------
+    super_seg = (Super_seg *)super_seg_buffer;
+    
+    tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
 
-        nargv[0] = argv[0];
-        nargv[1] = "-f";
-        for(i = 1; i < argc; i++)
-        {
-            nargv[i + 1] = argv[i];
+    tail_log_addr->seg_no = 1;
+    tail_log_addr->bk_no =1;
 
-        }
-*/
-        /* 
-        //---------------?? add mount point--------------------------- 
-        status = fuse_main(argc + 1, nargv, &LFS_oper, NULL);
-        if(status){printf("fuse_main error\n"); return status;}
-*/
+    void * sin_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    Flash_Read(flash, seg_size, seg_size, sin_buffer); 
+
+
+    seg_in_memory = (Seg *)sin_buffer;
+    Flash_Close(flash);
+
+    sec_num = super_seg->sec_num;
+    bk_size= super_seg->bk_size;
+    bks_per_seg = seg_size / bk_size;
+    seg_num = super_seg->seg_num;
+    bk_content_size = bk_size * FLASH_SECTOR_SIZE;
+
+    //-------------------------------------------------------------
+   
+    
+    //------------- create cache once the whole system ----------
+    //---------- starts to run------------------------------------
+    create_cache();
+
 #define NARGS 3
-        int nargc = argc + NARGS;
+        int nargc = 2 + NARGS;
         nargv = (char **)malloc((nargc)*sizeof(char*));
 
         nargv[0] = argv[0];
+
         nargv[1] = "-f";
         nargv[2] = "-s";
         nargv[3] = "-d";
-
-        for(i = 1; i < argc; i++)
-        {
-            nargv[i + NARGS] = argv[i];
-
-        }
-        //---------------?? add mount point--------------------------- 
+        nargv[4] = argv[ argc - 1];
+        
         status = fuse_main(nargc, nargv, &LFS_oper, NULL);
         if(status){printf("fuse_main error\n"); return status;}
-        
-//    }
-
-
 
     return 0;
 }
-
-
-
 
 
 

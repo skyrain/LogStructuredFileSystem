@@ -22,11 +22,6 @@ int main(int argc, char * argv[])
     bk_size = 2;
     bks_per_seg = 32;
 
-//??
-    //------------file layer 设置 cache---------------    
-    //cache seg 数量，此处为默认值
-//    cache_seg_num = 4; 
-
 /*  
   mklfs [options] file
     -l size, --segment=size
@@ -120,9 +115,9 @@ int main(int argc, char * argv[])
     //------------store flashe memory configuration variables--------
     char* buffer = get_current_dir_name();
     char * s = "/config.ini";
-    char * config = (char *)calloc(1, strnlen(buffer) + strnlen(s));
+    char * config = (char *)calloc(1, strlen(buffer) + strlen(s));
     strcpy(config, buffer);
-    strcpy(config + strnlen(buffer), s);
+    strcpy(config + strlen(buffer), s);
    
     FILE *fp;
     if((fp=fopen(config,"wb")) == NULL) 
@@ -133,10 +128,17 @@ int main(int argc, char * argv[])
    
     printf("dir: %s\n", config);
 
-    char store[5];
-    sprintf(store, "%d", seg_size);
-    
-    fputs(store,fp);
-    fclose(fp); 
+    char store_seg_size[5];
+    sprintf(store_seg_size, "%d", seg_size);
+    fputs(store_seg_size,fp);
 
+    fputs("\n", fp);
+
+    char store_sec_num[5];
+    sprintf(store_sec_num, "%d", sec_num);
+    fputs(store_sec_num,fp);
+
+    fputs("\n", fp);
+    
+    fclose(fp); 
 }

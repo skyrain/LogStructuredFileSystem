@@ -163,7 +163,8 @@ typedef struct Super_seg
     u_int seg_num;      
     u_int seg_size;
     u_int bk_size;
- 
+    u_int wearlimit;
+    u_int sec_num;
     //----只记录除 super seg 外的data seg的利用率    
     Seg_usage_table * seg_usage_table;
     /* 
