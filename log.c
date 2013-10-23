@@ -32,7 +32,7 @@ int Log_Create()
     //根据用户输入参数创建flash memory
     //-------------------------------------------    
     //create flash file
-    Flash_Create(fl_file, wearlimit, sec_num);
+    Flash_Create(fl_file, wearlimit, sec_num / FLASH_SECTORS_PER_BLOCK);
     
     //----------------- super  seg      ----------------------------
     //---------------------------------------------------------------
@@ -189,7 +189,7 @@ int Log_Create()
        
         //-------write begin bk in disk in block size---------
         flash = Flash_Open(fl_file, flags, blocks); 
-        u_int s_sec = seg_size * FLASH_SECTOR_SIZE * i;
+        u_int s_sec = seg_size * i;
         Flash_Write(flash, s_sec, bk_size, tmp_bb);    
         Flash_Close(flash);
 
@@ -199,7 +199,7 @@ int Log_Create()
         {
             Block * tmp_b = (Block *)calloc(1, sizeof(Block));
             flash = Flash_Open(fl_file, flags, blocks); 
-            u_int s_sec = seg_size * FLASH_SECTOR_SIZE * i + bk_size * j;
+            s_sec = seg_size * i + bk_size * j;
             Flash_Write(flash, s_sec, bk_size, tmp_b);    
             Flash_Close(flash);
         }            
@@ -638,8 +638,27 @@ int Log_Free(LogAddress * log_addr, u_int length)
     return 0;
 }
 
-int Log_Init(char * filename, Inode ** ifile, u_int cachesize)
+/*
+int Log_Init(char * filename, Inode * ifile, u_int cachesize)
 {
-     ifile = &(super_seg->checkpoint->ifile); 
-     return 0;
+    //---------calloc memory------------------
+//    filename = (char *)calloc(1, 8);
+    
+    Inode* tmp_file = (Inode *)calloc(1, sizeof(Inode));
+
+
+    Flash_Flags flags = FLASH_SILENT;
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / 16;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(filename, flags, blocks);
+    Flash_Read(flash, 0, seg_size);
+//-------------------------------------------
+    Super_seg * tmp_ss = ()
+    
+    memcpy(tmp_file, super_seg->checkpoint->ifile, sizeof(Inode));
+    ifile = tmp_file;
+
+    return 0;
 }
+*/

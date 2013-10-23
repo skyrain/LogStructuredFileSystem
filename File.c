@@ -338,7 +338,7 @@ int File_Drop(Inode *Ino, int offset)
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
-int File_Layer_Init(char *filename, Inode **ifile, u_int cachesize)
+int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 {
 	// filename is the flash file that are going to open, these argument are passed by user, layer to layer.
 	// then we need to read the ifile from the checkpoint to the

@@ -36,6 +36,6 @@ int File_Read(Inode *inode, int offset, int length, void *buffer);
 
 int File_Free(Inode *inode);
 
-int File_Layer_Init(char *filename, Inode **ifile, u_int cachesize);
+int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize);
 
 void Get_Block_pointer(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);

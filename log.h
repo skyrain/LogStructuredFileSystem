@@ -284,5 +284,5 @@ int Log_Free(LogAddress * log_addr, u_int length);
 
 
 
-int Log_Init(char* filename, Inode ** ifile, u_int cachesize);
+int Log_Init(char* filename, Inode * ifile, u_int cachesize);
 #endif

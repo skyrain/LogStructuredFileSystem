@@ -113,12 +113,30 @@ int main(int argc, char * argv[])
     }
 
 
-//-------------------------------------------------------------
+    //---------------------------------------------------------------
     //create and format flash memory & create log in memory
     Log_Create();
 
-    //------------called in LFS.c --------------------------
-    //create cache: store in dis_cache 
-//    create_cache();
+    //------------store flashe memory configuration variables--------
+    char* buffer = get_current_dir_name();
+    char * s = "/config.ini";
+    char * config = (char *)calloc(1, strnlen(buffer) + strnlen(s));
+    strcpy(config, buffer);
+    strcpy(config + strnlen(buffer), s);
+   
+    FILE *fp;
+    if((fp=fopen(config,"wb")) == NULL) 
+    { 
+        printf("\nopen file error"); 
+        exit(1); 
+    }
+   
+    printf("dir: %s\n", config);
+
+    char store[5];
+    sprintf(store, "%d", seg_size);
+    
+    fputs(store,fp);
+    fclose(fp); 
 
 }

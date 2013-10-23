@@ -27,30 +27,13 @@ u_int cachesize;
 
 void *LFS_Init(struct fuse_conn_info *conn)
 {
-    fl_file = (char *)calloc(1, 8);
-    strcpy(fl_file, "flashmemory");
- 
-    //1.2 put super log seg in disk (start from disk first sector)
-    //choose the model of Flash
-    Flash_Flags flags = FLASH_SILENT;
-
-//----?? hard code--------------------------
-    
-    //blocks : # of blocks in the flash
-    sec_num = 1024;
-    u_int tmp = sec_num / 16;
-    u_int * blocks = &tmp;
-    Flash   flash = Flash_Open(fl_file, flags, blocks);
-
-//-----------------------------------------------
-
 	int *status;
 
 	status = (int *)calloc(1, sizeof(int));
 
 	if(*status)
 	{ printf("fail to init\n"); return status;}
-
+    
 	// Init Directory
 	*status = Dir_Layer_Init(filename, cachesize);
 	if(*status)
@@ -141,6 +124,9 @@ int main(int argc, char *argv[])
     int i;
     int status = 0;
     char **nargv = NULL;
+
+    filename = (char *)calloc(1, 8);
+    strcpy(filename, "flashmemory");
 
     //print all the arguments
     for(i = 0; i < argc; i++)
