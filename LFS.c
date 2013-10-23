@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 {
 
     seg_num = 1000;
-
+    bool use_opt = false;
 
     cache_seg_num = 4;
     int ch;
@@ -108,11 +108,13 @@ int main(int argc, char *argv[])
                     return 0;
                 }
                 cache_seg_num = (u_int)atoi(optarg);
+                use_opt = true;
                 break;
            case '?':
                 break;
         }
     }
+    fl_file = (char *)calloc(1, 8);
     strcpy(fl_file, argv[argc - 1]);
     cachesize = cache_seg_num;
    
@@ -125,20 +127,61 @@ int main(int argc, char *argv[])
     char **nargv = NULL;
 
     //print all the arguments
-    for(i=0; i<argc; i++)
+    for(i = 0; i < argc; i++)
     {
         printf("%s\n", argv[i]);
     }
 
-    nargv = (char **)malloc((argc+1)*sizeof(char*));
+    if(use_opt)
+    {
+        nargv = (char **)malloc((argc - 1)*sizeof(char*));
 
-    nargv[0] = argv[0];
-    nargv[1] = "-f";
-    for(i=1; i<argc; i++)
-        nargv[i+1] = argv[i];
+        nargv[0] = argv[0];
+        nargv[1] = "-f";
+        
+        for(i = 3; i < argc; i++)
+        {
+            nargv[i - 1] = argv[i];
 
-    status = fuse_main(argc+1, nargv, &LFS_oper, NULL);
-    if(status){printf("fuse_main error\n"); return status;}
+        }
+        //---------------?? add mount point--------------------------- 
+        status = fuse_main(argc - 1, nargv, &LFS_oper, NULL);
+        if(status){printf("fuse_main error\n"); return status;}
+    }
+    else
+    {
+/*
+        nargv = (char **)malloc((argc + 1)*sizeof(char*));
+
+        nargv[0] = argv[0];
+        nargv[1] = "-f";
+        for(i = 1; i < argc; i++)
+        {
+            nargv[i + 1] = argv[i];
+
+        }
+*/
+        /* 
+        //---------------?? add mount point--------------------------- 
+        status = fuse_main(argc + 1, nargv, &LFS_oper, NULL);
+        if(status){printf("fuse_main error\n"); return status;}
+*/
+
+        nargv = (char **)malloc((argc)*sizeof(char*));
+
+        nargv[0] = argv[0];
+        for(i = 1; i < argc; i++)
+        {
+            nargv[i] = argv[i];
+
+        }
+        //---------------?? add mount point--------------------------- 
+        status = fuse_main(argc, nargv, &LFS_oper, NULL);
+        if(status){printf("fuse_main error\n"); return status;}
+        
+    }
+
+
 
     return 0;
 }
