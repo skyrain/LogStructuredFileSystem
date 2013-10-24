@@ -654,10 +654,20 @@ int Log_Free(LogAddress * log_addr, u_int length)
 
 int Log_Init(char * filename, Inode * iifile, u_int cachesize)
 {
-    //---------calloc memory------------------
-    iifile = (Inode *)calloc(1, sizeof(Inode));
+    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    //--- 2.  read super seg------------------------------- 
+    Flash_Flags flags = FLASH_SILENT;
 
-    iifile = super_seg->checkpoint->ifile;
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(filename, flags, blocks);
+    Flash_Read(flash, 0, seg_size, buffer);
+//----------------?? 为毛filename为空---------------
+    Inode * tf = (Inode *)(buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
+
+    memcpy(iifile, tf, sizeof(Inode));
+    free(buffer);
 
     return 0;
 }

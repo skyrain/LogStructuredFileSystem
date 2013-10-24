@@ -337,7 +337,7 @@ int File_Drop(Inode *Ino, int offset)
 */
 
 // change the size of file
-int File_Truncate(inode *myNode, off_t offset)
+int File_Truncate(Inode *myNode, off_t offset)
 {		
         Block_pointer *blockBuffer = NULL;
         Block_pointer *blockPointer;
@@ -346,7 +346,11 @@ int File_Truncate(inode *myNode, off_t offset)
         int status = 0;
 
         // Check to be sure the file is bigger than offset
-        if (offset > myNode->filesize){printf( "Truncate beyond end of file.\n")return -EPERM;}
+        if (offset > myNode->filesize)
+        {
+            printf( "Truncate beyond end of file.\n");
+            return -EPERM;
+        }
 
         // Decide which block to start truncating
         float temp = (float) offset/ BLOCK_SIZE;
@@ -396,9 +400,9 @@ int File_Truncate(inode *myNode, off_t offset)
 
 }
 
-void File_Layer_Destroy();
+void File_Layer_Destroy()
 {
-	Log_Destroy();
+//	Log_Destroy();
 }
 
 // Init the file layer, ready to read and write the file from the info 
@@ -410,7 +414,7 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 	// memory, please return like:*ifile = &(Log.checkPoint.ifile)
 	// in phase 2, we need add more argument for lfs [option], 
 	// such as cachesize and the interval of checkpoint time.
-	return -1;// Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
+	return  Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.

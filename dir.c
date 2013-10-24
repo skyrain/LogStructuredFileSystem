@@ -21,7 +21,9 @@ int ifile_length; //number of files currently held in the ifile;
 int Dir_Layer_Init(char *filename, u_int cachesize)
 {
 	int status = 0;
-	// Init the File layer as well
+
+    inode_ifile = (Inode *)calloc(1, sizeof(Inode));
+    // Init the File layer as well
 	// int normalclose; save for the checkpoint roll forward---???--
     status = File_Layer_Init(filename, inode_ifile, cachesize);
 	
@@ -473,7 +475,7 @@ int Dir_Delete_File(const char *path)
 {
 	Inode *fileNode, *dirNode;
 	char filename[FILE_NAME_LENGTH];
-	int i, status;
+	int status;
 
 	status = Get_Inode(path, &fileNode);
 	if(status) { return status;}	
