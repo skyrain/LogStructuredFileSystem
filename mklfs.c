@@ -107,7 +107,6 @@ int main(int argc, char * argv[])
         printf("Not whole number of segs!\n");
     }
 
-
     //---------------------------------------------------------------
     //create and format flash memory & create log in memory
     Log_Create();
@@ -139,6 +138,7 @@ int main(int argc, char * argv[])
     fputs(store_sec_num,fp);
 
     fputs("\n", fp);
-    
+
     fclose(fp); 
+
 }

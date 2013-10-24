@@ -107,8 +107,8 @@ typedef struct Block_pointer
 {
     //------- file bk size in sectors--------
     //------actually in flash memory: 1 sector is its 1 block-------
-    int seg_no;
-    int bk_no;
+    u_int seg_no;
+    u_int bk_no;
 }Block_pointer;
 
 
@@ -134,7 +134,7 @@ typedef struct Inode
     time_t access_Time;
     time_t create_Time;
     time_t change_Time;
-    int num_links;
+    u_int num_links;
 
 }Inode;
 
@@ -145,7 +145,7 @@ typedef struct Inode
 //--------2.seg usage table
 //--------3. current time
 //--------4. pointer to the last segment written
-typedef struct Checkpoint_region
+typedef struct Checkpoint
 {
     Inode * ifile;
     Seg_usage_table *seg_usage_table;

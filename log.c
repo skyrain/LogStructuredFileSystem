@@ -5,7 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-
 /*
  *
  *?? means not for sure or need improve in future
@@ -37,60 +36,86 @@ int Log_Create()
     //----------------- super  seg      ----------------------------
     //---------------------------------------------------------------
     //format flash file as segment(same size as log seg)
-//    u_int seg_size_bytes = FLASH_SECTOR_SIZE * seg_size;
   
     //1.store Super log seg in flash memory's 1st seg
     //1.1 create super log seg 
+    //1.2 put super log seg in disk (start from disk first sector)
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
     
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks); 
+   
+    //------------把super_seg的信息一个一个填进去----------- 
+    void * s_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+
+    u_int bytes_offset = 0;
     //----about calloc----------
     Super_seg * s_seg = (Super_seg *)calloc(1, sizeof(Super_seg));
-
-    super_seg = s_seg;
-
     s_seg->seg_no = 0;
     s_seg->seg_num = seg_num;
     s_seg->seg_size = seg_size;
     s_seg->bk_size = bk_size;
     s_seg->wearlimit = wearlimit;
     s_seg->sec_num = sec_num;
-
-    Seg_usage_table * start_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
-    start_sut->seg_no = 1;
-    start_sut->num_live_bk = 0;
-    start_sut->modify_time = -1;
-    start_sut->next = NULL;
-
-    s_seg->seg_usage_table = start_sut;
-
-    Seg_usage_table * sut_walker = start_sut;
-    for(i = 2; i < seg_num; i++)
-    {
-        Seg_usage_table * tmp_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
-        tmp_sut->seg_no = i;
-        tmp_sut->num_live_bk = 0;
-        tmp_sut->modify_time = -1;
-
-        while(sut_walker->next != NULL)
-           sut_walker = sut_walker->next;
-
-        sut_walker->next = tmp_sut; 
-    }
+    s_seg->seg_usage_table = s_seg_buffer + sizeof(u_int) * 6 
+        + sizeof(Seg_usage_table *) + sizeof(Checkpoint *);  
+    s_seg->checkpoint = s_seg_buffer + sizeof(u_int) * 6
+        + sizeof(Seg_usage_table *) + sizeof(Checkpoint *) 
+        + (seg_num - 1) * sizeof(Seg_usage_table);
+     
+    memcpy(s_seg_buffer, s_seg, sizeof(Super_seg));
+    bytes_offset += sizeof(Super_seg);
     
-    Checkpoint * checkpoint = (Checkpoint *)calloc(1, sizeof(Checkpoint));
-   
-    s_seg->checkpoint = checkpoint;
+    free(s_seg);
+    //-------for seg usage table in super seg---------------
+    for(i = 1; i < seg_num; i++)
+    {
+        Seg_usage_table * tmp_sst = (Seg_usage_table *)(s_seg_buffer
+                + bytes_offset);
+        tmp_sst->seg_no = i;
+        tmp_sst->num_live_bk = 0;
+        tmp_sst->modify_time = -1;
+        bytes_offset += sizeof(Seg_usage_table);
+        if(i != seg_num -1)
+            tmp_sst->next = s_seg_buffer + bytes_offset;
+        else
+            tmp_sst->next = NULL;
+    }    
 
+    //---------------for checkpoint in super seg-------------
+    Checkpoint * cp = (Checkpoint *)calloc(1, sizeof(Checkpoint));
+    cp->ifile = s_seg_buffer + bytes_offset + sizeof(Inode *) 
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof (Seg *);
+    cp->seg_usage_table = s_seg_buffer + bytes_offset + sizeof(Inode *)
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof(Seg *)
+        + sizeof(Inode);
+    cp->curr_time = 0;
+    cp->last_seg_written = s_seg_buffer + bytes_offset + sizeof(Inode *)
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + + sizeof(Seg *)
+        + sizeof(Inode) + sizeof(Seg_usage_table) * (seg_num -1);
+    
+    memcpy(s_seg_buffer + bytes_offset, cp, sizeof(Checkpoint));
+    bytes_offset += sizeof(Checkpoint);
+    free(cp);
 
+    //----------for ifile in checkpoint---------------------
     Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
-
-    tmp_inode->ino = -1;
+    tmp_inode->ino = 0;
     tmp_inode->filetype = 0;
     tmp_inode->filesize = 0;
-    strcpy(tmp_inode->filename, "ifile");
+    tmp_inode->filename[0] = 'i';
+    tmp_inode->filename[1] = 'f';
+    tmp_inode->filename[2] = 'i';
+    tmp_inode->filename[3] = 'l';
+    tmp_inode->filename[4] = 'e';
+
     for(i = 0; i < DIRECT_BK_NUM; i++)
     {
-        tmp_inode->direct_bk[i].seg_no = -1;
-        tmp_inode->direct_bk[i].bk_no = -1;
+        tmp_inode->direct_bk[i].seg_no = 0;
+        tmp_inode->direct_bk[i].bk_no = i;
     }
     tmp_inode->mode = 0;
     tmp_inode->userID = getuid();
@@ -102,50 +127,30 @@ int Log_Create()
     tmp_inode->create_Time = t;
     tmp_inode->change_Time = t;
     tmp_inode->num_links = 0;
-
-    checkpoint->ifile = tmp_inode;
-    
-
-
-
-
-    Seg_usage_table * s_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
-    s_sut->seg_no = 1;
-    s_sut->num_live_bk = 0;
-    s_sut->modify_time = -1;
-    s_sut->next = NULL;
-
-    checkpoint->seg_usage_table = s_sut;
-
-    sut_walker = s_sut;
-    for(i = 2; i < seg_num; i++)
-    {
-        Seg_usage_table * tmp_sut = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
-        tmp_sut->seg_no = i;
-        tmp_sut->num_live_bk = 0;
-        tmp_sut->modify_time = -1;
-
-        while(sut_walker->next != NULL)
-           sut_walker = sut_walker->next;
-
-        sut_walker->next = tmp_sut; 
-    }
  
-    checkpoint->curr_time = -1;
-    checkpoint->last_seg_written = NULL;
+    memcpy(s_seg_buffer + bytes_offset, tmp_inode, sizeof(Inode));
+    bytes_offset += sizeof(Inode);
+    free(tmp_inode); 
+    //-------for seg usage table in checkpoint-------------
+    for(i = 1; i < seg_num; i++)
+    {
+        Seg_usage_table * tmp_sst = (Seg_usage_table *)(s_seg_buffer
+                + bytes_offset);
+        tmp_sst->seg_no = i;
+        tmp_sst->num_live_bk = 0;
+        tmp_sst->modify_time = -1;
+        bytes_offset += sizeof(Seg_usage_table);
+        if(i != seg_num -1)
+            tmp_sst->next = s_seg_buffer + bytes_offset;
+        else
+            tmp_sst->next = NULL;
+    }
 
-    
-    //1.2 put super log seg in disk (start from disk first sector)
-    //choose the model of Flash
-    Flash_Flags flags = FLASH_SILENT;
-    
-    //blocks : # of blocks in the flash
-    u_int tmp = sec_num / 16;
-    u_int * blocks = &tmp;
-    Flash   flash = Flash_Open(fl_file, flags, blocks); 
-    
-    Flash_Write(flash, 0, seg_size, s_seg);    
-    Flash_Close(flash);
+    Seg * tmp_seg = (Seg *)calloc(1, sizeof(Seg));
+    memcpy(s_seg_buffer + bytes_offset, tmp_seg, sizeof(Seg));
+    free(tmp_seg);
+
+    Flash_Write(flash, 0, seg_size, s_seg_buffer);    
     //-----------------------------------------------------------
 
 
@@ -154,58 +159,65 @@ int Log_Create()
     //---------------------------------------------------------------
     for(i = 1; i < seg_num; i++)
     {
+        void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+        bytes_offset = 0;
+        
+        Seg * ts = (Seg *)calloc(1, sizeof(Seg));
+        ts->begin_bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *);
+        ts->bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *) 
+            + sizeof(Begin_bk); 
+        memcpy(n_seg_buffer, ts, sizeof(Seg));
+        bytes_offset += sizeof(Seg);
 
-        Begin_bk * tmp_bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+        free(ts);
 
         //--------begin bk----------------------------------
-        tmp_bb->seg_no = i;
-
-        Seg_sum_bk * ssum = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
-        tmp_bb->ssum_bk = ssum;
-        ssum->bk_no = 0;
-
-        Seg_sum_entry * s_entry = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
-
-        ssum->seg_sum_entry = s_entry;
-
-        s_entry->bk_no = 1;
-        s_entry->file_no = -1;
-        s_entry->file_bk_no = -1;
-        s_entry->next = NULL;
-
-        Seg_sum_entry * entry_walker = s_entry;
-
+        Begin_bk * bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+        bb->seg_no = i;
+        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(u_int)
+            + sizeof(Seg_sum_bk *);
+        memcpy(n_seg_buffer, bb, sizeof(Begin_bk));
+        bytes_offset += sizeof(Begin_bk);
+        free(bb);
+        
+        Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+        ssb->bk_no = 0;
+        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(u_int)
+            + sizeof(Seg_sum_entry *);
+        memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
+        bytes_offset += sizeof(Seg_sum_bk);
+        free(ssb);
+        
         u_int j;
-        for(j = 2; j < bks_per_seg; j++)
+        for(j = 1; j < bks_per_seg; j++)
         {
-            Seg_sum_entry * t_entry = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
-            t_entry->bk_no = j;
-            t_entry->file_no = -1;
-            t_entry->file_bk_no = -1;
-
-            while(entry_walker->next != NULL)
-                entry_walker = entry_walker->next;
-
-            entry_walker->next = t_entry;
+            Seg_sum_entry * sse = (Seg_sum_entry *)(n_seg_buffer
+                    + bytes_offset);
+            sse->bk_no = j;
+            sse->file_no = -1;
+            sse->file_bk_no = -1;
+            bytes_offset += sizeof(Seg_sum_entry);
+            if(i != bks_per_seg - 1)
+                sse->next = n_seg_buffer + bytes_offset;
+            else
+                sse->next = NULL;
         }
-       
-        //-------write begin bk in disk in block size---------
-        flash = Flash_Open(fl_file, flags, blocks); 
-        u_int s_sec = seg_size * i;
-        Flash_Write(flash, s_sec, bk_size, tmp_bb);    
-        Flash_Close(flash);
-
+        
         //-------------normal bk-----------------------------
         //---start offset: seg_start + bk_size * FLASH_SECTOR_SIZE
         for(j = 1; j < bks_per_seg; j++)
         {
-            Block * tmp_b = (Block *)calloc(1, sizeof(Block));
-            flash = Flash_Open(fl_file, flags, blocks); 
-            s_sec = seg_size * i + bk_size * j;
-            Flash_Write(flash, s_sec, bk_size, tmp_b);    
-            Flash_Close(flash);
-        }            
+            Block * b = (Block *)(n_seg_buffer + 
+                    j * bk_size * FLASH_SECTOR_SIZE);
+            b->bk_content = n_seg_buffer + 
+                j * bk_size * FLASH_SECTOR_SIZE + sizeof(void *);
+        } 
+
+        Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
+        free(n_seg_buffer);   
     }
+
+    Flash_Close(flash);
     
     return 0;
 }
@@ -640,24 +652,13 @@ int Log_Free(LogAddress * log_addr, u_int length)
     return 0;
 }
 
-/*
-int Log_Init(char * filename, Inode * ifile, u_int cachesize)
+int Log_Init(char * filename, Inode * iifile, u_int cachesize)
 {
     //---------calloc memory------------------
-    Inode* tmp_file = (Inode *)calloc(1, sizeof(Inode));
+    iifile = (Inode *)calloc(1, sizeof(Inode));
 
-    Flash_Flags flags = FLASH_SILENT;
-    //blocks : # of blocks in the flash
-    u_int tmp = sec_num / 16;
-    u_int * blocks = &tmp;
-    Flash   flash = Flash_Open(filename, flags, blocks);
-    Flash_Read(flash, 0, seg_size);
-//-------------------------------------------
-    Super_seg * tmp_ss = ()
-    
-    memcpy(tmp_file, super_seg->checkpoint->ifile, sizeof(Inode));
-    ifile = tmp_file;
+    iifile = super_seg->checkpoint->ifile;
 
     return 0;
 }
-*/
+
