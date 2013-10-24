@@ -336,6 +336,66 @@ int File_Drop(Inode *Ino, int offset)
 }
 */
 
+// change the size of file
+int File_Truncate(inode *myNode, off_t offset)
+{		
+        Block_pointer *blockBuffer = NULL;
+        Block_pointer *blockPointer;
+        int fileBlockNumber;
+        int firstBlockToRemove, partialBlockRewrite;
+        int status = 0;
+
+        // Check to be sure the file is bigger than offset
+        if (offset > myNode->filesize){printf( "Truncate beyond end of file.\n")return -EPERM;}
+
+        // Decide which block to start truncating
+        float temp = (float) offset/ BLOCK_SIZE;
+        firstBlockToRemove = ceil(temp);
+        partialBlockRewrite = floor(temp);
+        //partialBlockRewrite = firstBlockToRemove - 1;
+		
+		// wanna read or wirte not in the BLOCK_SIZE
+        if(partialBlockRewrite * BLOCK_SIZE != offset){
+                // there is a partial block truncated, handle it
+                int sizePartBlock = offset - partialBlockRewrite * BLOCK_SIZE;
+                void *buffer = calloc(1, BLOCK_SIZE);
+				
+                status = File_Read(myNode, partialBlockRewrite * BLOCK_SIZE,
+                                                        sizePartBlock, buffer);
+                if( status ){printf("read the truncating file wrong \n"); return status;}
+                status = File_Write(myNode, partialBlockRewrite * BLOCK_SIZE, BLOCK_SIZE, buffer);
+                if( status )
+                {printf("Fail to truncate the partial block \n"); return status;}
+        }
+
+        if (firstBlockToRemove * BLOCK_SIZE > myNode->filesize){
+                printf("No blocks to remove.\n");
+        }else{ // release blocks at end of file
+                int maxFileSizeBlocks = DIRECT_BK_NUM + BLOCK_SIZE/sizeof(Block_pointer);
+                for( fileBlockNumber = firstBlockToRemove; fileBlockNumber < maxFileSizeBlocks ; fileBlockNumber++)
+                {
+                        if( fileBlockNumber < DIRECT_BK_NUM )
+                        {
+                                blockPointer = &myNode->direct_bk[fileBlockNumber];
+                        }
+                        
+                        if( blockPointer->seg_no == FREE_BLOCK_NUM ){
+                                // just skip over unused blocks - there may be used ones later
+                        }else{
+								// decrement the seg usage table
+                                //Decrement_Seg_Usage( blockPointer->seg_no, blockPointer->bk_no );
+                                blockPointer->bk_no = FREE_BLOCK_NUM;
+                                blockPointer->seg_no = FREE_BLOCK_NUM;
+                        }
+                }
+        }
+
+        myNode->filesize = offset;
+
+        return status;
+
+}
+
 void File_Layer_Destroy();
 {
 	Log_Destroy();
