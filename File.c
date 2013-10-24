@@ -134,6 +134,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 	return status;
 }
 
+
 int File_Write(Inode *Ino, int offset, int length, void *buffer)
 {
 	// length to be written in bytes
@@ -291,7 +292,7 @@ int File_Free(Inode *Ino)
 
 	int status = 0;
 
-	//status = File_Drop(Ino, 0);
+	status = File_Truncate(Ino, 0);
 	if(status)
 	{
 		printf("ERROR: when dropping the file");
@@ -335,6 +336,10 @@ int File_Drop(Inode *Ino, int offset)
 }
 */
 
+void File_Layer_Destroy();
+{
+	Log_Destroy();
+}
 
 // Init the file layer, ready to read and write the file from the info 
 // of ifile.
@@ -345,7 +350,7 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 	// memory, please return like:*ifile = &(Log.checkPoint.ifile)
 	// in phase 2, we need add more argument for lfs [option], 
 	// such as cachesize and the interval of checkpoint time.
-	return Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
+	return -1;// Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.

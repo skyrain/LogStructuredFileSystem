@@ -11,7 +11,7 @@
 #include <time.h>
 #include "dir.h"
 
-Inode *ifile; //array of inodes
+Inode *ifile; //ifile stores an array of inodes
 Inode *inode_ifile; // the inode of ifile;
 int ifile_length; //number of files currently held in the ifile;
 
@@ -69,7 +69,7 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 {
 	Inode *myNode;
 	int status;
-
+	
 	status = Get_Inode(path, &myNode);
 	if(status) {printf("openning file fail\n"); return status;}
 
@@ -93,11 +93,12 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
 
 	DirEntry currentDir[2];
-	Inode *dirNode;
-	Inode *parentDirNode;
+	Inode *dirNode; //= (Inode *)calloc(1,sizeof(Inode));
+	Inode *parentDirNode; //= (Inode *)calloc(1,sizeof(Inode));
 	struct fuse_file_info *fi = NULL;
 	// Create a directory and get its inode to init
 	// this will also add its info to the parent dir
+	
 	Dir_Create_File(dir_name, mode, uid, gid, fi);
 	
 	Get_Inode(dir_name, &dirNode);
@@ -149,7 +150,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 	// Check if file exists unless root
 	if (strcmp(path, "/") != 0){
-		Inode *someNode;
+		Inode *someNode = (Inode *)calloc(1,sizeof(Inode));
 		status = Get_Inode(path, &someNode);
 		if (status == 0){
 			printf( "File already exists \n");
@@ -201,10 +202,10 @@ int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
 	// size: how much data would you like to read?
 	// offset: at what offset would you like to start reading?
 	// returns number of bytes read
-	Inode *myNode;
+	Inode *myNode = (Inode *)calloc(1,sizeof(Inode));
 	int status;
 
-	status = Validate_Inum(fi->fh, (char *) path);
+	status = Validate_Inum(fi->fh, (char *)path);
 	if( status ){
 		// Bad Inum, parse the path to get the inode
 		status = Get_Inode(path, &myNode);
@@ -246,10 +247,11 @@ int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
 int Get_Inode(const char *path, Inode **returnNode){
 	// Get the inode for the path If the path is invalid, throw an error
 	// DirNode is inode ** so it to pass back an address of an inode
+	returnNode = (Inode **)calloc(1,sizeof(Inode *));
 	int i;
 	char filename[FILE_NAME_LENGTH]; 
-	const char *subpath; 	// will point to the part of the path that has not yet been processed
-	char *breakpath; // holds the location of the next '/' in the subpath
+	const char *subpath; 	// will point to the "part of the path" that has not yet been processed
+	char *breakpath; // holds the "location" of the next '/' in the subpath
 	// Check to make sure this is a valid path
 	if (path[0] != '/'){
 		printf("ERROR: invalid path \n");
@@ -272,10 +274,11 @@ int Get_Inode(const char *path, Inode **returnNode){
 	// First, read the directory file from disk
 	//int inum = ROOT_INUM;
 	int numfiles;
-	Inode *dirNode = &ifile[ROOT_INUM];
+	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
+	dirNode = &ifile[ROOT_INUM];
 	DirEntry *dir  = Get_Dir(dirNode, &numfiles);
 	if (dir == NULL){
-		printf("ERROR\n");
+		printf("ERROR fail to get dir\n");
 		return -ENOENT;
 	}
 	Inode *myNode = dirNode; // so that it return the right thing for root
@@ -283,11 +286,12 @@ int Get_Inode(const char *path, Inode **returnNode){
 
 	while(breakpath){ //strlen returns the number of chars before /0
 		// determine where the next '/' is in the subpath
+		// strchr return the pointer of location in subpath where the "/" show up in the first time
 		breakpath = strchr( subpath,  '/');
 
 		if (breakpath != NULL){
 		// if there is '/' in subpath, pull out chars before as the next
-		// dirname to find
+		// dirname to find that mean this is a directory
 			if (breakpath - subpath > FILE_NAME_LENGTH){
 				printf("ERROR: invalid subpath:\n");
 				return -ENOENT;
@@ -341,6 +345,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 		subpath = &breakpath[1];
 	}
 
+	// returnNode has been initiated.
 	*returnNode = myNode;
 
 	time( &inode_ifile->access_Time );
@@ -360,7 +365,7 @@ int Add_File_To_Directory(const char *path, int inum)
 {
 	//Add the file of this path to the directory.
 	int status;
-	Inode *dirNode;
+	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
 	DirEntry currentFile;
 	status = Get_Dir_Inode(path, &dirNode, currentFile.filename);
 	if(status)
@@ -375,10 +380,10 @@ int Add_File_To_Directory(const char *path, int inum)
 	// check whether write the file correctly, by size
 	if(status != sizeof(DirEntry))
 	{
-		printf("error! to add the file to dir");
+		printf("error! when to add the file to dir");
 		if(status < 0)
 		{
-			printf("error! to add the file to dir\n"); 
+			printf("error! when to add the file to dir\n"); 
 			return status;
 		}
 		else
@@ -392,12 +397,12 @@ int Add_File_To_Directory(const char *path, int inum)
 
 int Dir_Write_File(const char *path, const char *buf, size_t size, off_t offset,
 			struct fuse_file_info *fi){
-	// path: path of file to read
-	// buf: buffer from which to read file contents
-	// size: how much data would you like to read?
+	// path: path of file to write
+	// buf: buffer from which to weite file contents
+	// size: how much data would you like to write?
 	// offset: at what offset would you like to start writing?
 	// returns the number of bytes written
-	Inode *myNode;
+	Inode *myNode = (Inode *)calloc(1,sizeof(Inode));
 	int status;
 
 //	status = _Get_Inode(path, &myNode);
@@ -434,11 +439,74 @@ int Dir_Write_File(const char *path, const char *buf, size_t size, off_t offset,
 	return size;
 }
 
+// delete some part of the file, shrink the size of file ---???---
+// phase 2, to handle the indirect block
+int Dir_Truncate_File(const char *path, off_t offset)
+{
+	Inode *myNode;
+	int status;
+	
+	status = Get_Inode(path, &myNode);
+	if(status){ printf("delete file in Dir\n"); return status;}
+
+	if(offset < myNode->filesize)
+	{
+		status = File_Truncate(myNode, offset);
+	}
+	else if(offset > myNode->filesize)
+	{
+		char buf = '\0';
+		status = File_Write(myNode, offset -1, 1, &buf);
+		
+		if(status)
+		{
+			printf("fail to truncate the file\n");
+			return status;
+		}
+	}
+
+	return status;
+}
+
+// Delete the file specified by path. only file not dir ---???--- phase 2
+int Dir_Delete_File(const char *path)
+{
+	Inode *fileNode, *dirNode;
+	char filename[FILE_NAME_LENGTH];
+	int i, status;
+
+	status = Get_Inode(path, &fileNode);
+	if(status) { return status;}	
+	status = Get_Dir_Inode(path, &dirNode, filename);
+	if(status) { return status;}
+	
+	// only delete the file from the LFS
+	if(fileNode->num_links == 1 )
+	{
+		status = File_Free(fileNode);
+		if(status) { printf(" error when use file free in dir delete\n"); return status;}
+
+	}
+	else
+	{
+		printf("error in dir delete file \n");
+		return -ENOENT;
+	}
+
+	return 0;
+}
+
+void Dir_Layer_Destroy()
+{
+	File_Layer_Destroy();
+	free(ifile);
+}
+
 int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 {
-	// path: path of the file to read
-	// buf: buffer from which to read file contents
-	// size: how much data would like to read
+	// path: path of the file to write
+	// buf: buffer from which to write file contents
+	// size: how much data would like to write
 	// offset: start point
 	//
 	// return the number of bytes written
@@ -457,7 +525,7 @@ int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
         // Gets the directory that contains the file/dir specified by path
-  
+  	returnNode = (Inode **)calloc(1,sizeof(Inode *));
         int status = 0;  
         char *breakpath; // holds the location of the last '/' in the subpath                              
         char *dirpath;   
@@ -578,8 +646,8 @@ int Expand_Ifile(int n){
 
 	printf( "ifile_length= %i, new inodes= %i\n", ifile_length, n);
 	ifile_length += n;
-//	status = Flush_Inums( ifile_length - n, n );
-//	printf( "Flush_Inums status: %i\n", status );
+//	status = Flush_Ino( ifile_length - n, n );
+//	printf( "Flush_Ino status: %i\n", status );
 //	if( status ){
 //		return status;
 //	}

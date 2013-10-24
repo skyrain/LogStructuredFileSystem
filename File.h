@@ -38,4 +38,8 @@ int File_Free(Inode *inode);
 
 int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize);
 
+int File_Truncate(Inode *myNode, off_t offset);
+
+void File_Layer_Destroy();
+
 void Get_Block_pointer(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);

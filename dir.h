@@ -16,7 +16,7 @@
 #include <fuse.h>
 
 //more need from tianyu
-#define ROOT_INUM 0
+#define ROOT_INUM 1
 #define UNDEFINE_FILE -2
 
 typedef struct DirEntry
@@ -35,11 +35,15 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi);
 
 int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi);
 
-void Dir_layer_De();
+void Dir_Layer_Destroy();
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename);
 
 int Dir_Write_File(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+
+int Dir_Truncate_File(const char *path, off_t offset);
+
+int Dir_Delete_File(const char *path);
 
 int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset);
 
