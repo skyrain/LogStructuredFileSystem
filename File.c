@@ -345,7 +345,7 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 	// memory, please return like:*ifile = &(Log.checkPoint.ifile)
 	// in phase 2, we need add more argument for lfs [option], 
 	// such as cachesize and the interval of checkpoint time.
-	return -1;// Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
+	return Log_Init(filename, ifile, cachesize /* other arguement in phase 2*/);
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.
