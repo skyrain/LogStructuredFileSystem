@@ -166,9 +166,9 @@ int main(int argc, char *argv[])
     void * super_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     Flash_Read(flash, 0, seg_size, super_seg_buffer); 
 
-
+   
     //----------for global variables in log.h-----------------------
-    super_seg = (Super_seg *)super_seg_buffer;
+    Super_seg * super_seg = (Super_seg *)super_seg_buffer;
     
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
 
