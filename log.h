@@ -1,5 +1,5 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef _LOG_H
+#define _LOG_H
 
 
 #include "flash.h"

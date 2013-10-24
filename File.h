@@ -3,10 +3,27 @@
  * Created on: Oct 11, 2013
  * This is the file layer header
  */
+#ifndef _FILE_H
+#define _FILE_H
 
 //#include <sys/types.h>
 #include "log.h"
 #include <sys/types.h>
+
+/*
+extern struct Block;
+extern struct Seg_sum_entry;
+extern struct Seg_sum_bk;
+extern struct Begin_bk;
+extern struct Seg;
+extern struct LogAddress;
+extern struct Seg_usage_table;
+extern struct Block_pointer;
+extern struct Inode;
+extern struct checkpoint;
+extern struct Super_seg;
+extern struct Disk_cache;
+*/
 
 /*
  * inode is the inode of the file to be accessed, 
@@ -43,3 +60,5 @@ int File_Truncate(Inode *myNode, off_t offset);
 void File_Layer_Destroy();
 
 void Get_Block_pointer(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);
+
+#endif

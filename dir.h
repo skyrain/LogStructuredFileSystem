@@ -3,13 +3,15 @@
  * Created on: oct 17, 2013
  * This is the directory layer h code
  */
+#ifndef _DIR_H
+#define _DIR_H
 
 #ifndef FUSE_USE_VERSION
 #define FUSE_USE_VERSION 26
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "log.h"
+//#include "log.h"
 #include "File.h"
 #include <string.h>
 #include <unistd.h>
@@ -18,6 +20,9 @@
 //more need from tianyu
 #define ROOT_INUM 1
 #define UNDEFINE_FILE -2
+
+extern Inode *ifile; //ifile stores an array of inodes
+extern Inode *inode_ifile; // the inode of ifile;
 
 typedef struct DirEntry
 {
@@ -63,4 +68,5 @@ int Expand_Ifile(int n);
 
 DirEntry *Get_Dir(Inode *dirNode, int *numfiles);
 
+#endif
 #endif

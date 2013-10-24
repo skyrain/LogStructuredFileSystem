@@ -1,10 +1,75 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "flash.h"
+//#include "flash.h"
 #include "log.h"
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+
+/*
+//----------------gloabal value-----------------------
+Super_seg * super_seg;
+Disk_cache * disk_cache;
+
+//-------points to the logAddress that could start to write data-------
+LogAddress * tail_log_addr;
+
+Seg * seg_in_memory;
+
+
+u_int wearlimit;
+
+//----flash memory name---------------
+char * fl_file;
+
+//--------default: 1024-------------
+//-------- chosen by user-------------
+u_int sec_num;
+
+//-------default: 2-----------------
+//-------2 sectors = 1 block----------
+u_int bk_size;
+
+//------default: 32--------------------------
+//---------chose by user-------------------
+u_int bks_per_seg;
+
+u_int seg_size;
+
+//??注意应写程序保证若用户输入导致计算出的seg_num非整数则让用户重新输
+//入
+//-----------total seg num-------------
+u_int seg_num;
+
+//-----------一个bk 可以存多少bytes的数据-----------
+//----------- in bytes-----------------------------
+u_int bk_content_size;
+
+//--------default :4 ------------------
+//------chosen by user----------------
+u_int cache_seg_num;
+
+//-------------------------------------------------------------
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
  *
  *?? means not for sure or need improve in future
@@ -103,7 +168,7 @@ int Log_Create()
 
     //----------for ifile in checkpoint---------------------
     Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
-    tmp_inode->ino = 0;
+    tmp_inode->ino = 5;
     tmp_inode->filetype = 0;
     tmp_inode->filesize = 0;
     tmp_inode->filename[0] = 'i';

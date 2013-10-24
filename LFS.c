@@ -16,8 +16,63 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>   
-#include "dir.h"      
+//#include "dir.h"      
 #include "log.h"      
+#include "LFS.h"
+#include "flash.h"
+
+//----------------gloabal value-----------------------
+extern Super_seg * super_seg;
+extern Disk_cache * disk_cache;
+
+//-------points to the logAddress that could start to write data-------
+extern LogAddress * tail_log_addr;
+
+extern Seg * seg_in_memory;
+
+
+extern u_int wearlimit;
+
+//----flash memory name---------------
+extern char * fl_file;
+
+//--------default: 1024-------------
+//-------- chosen by user-------------
+extern u_int sec_num;
+
+//-------default: 2-----------------
+//-------2 sectors = 1 block----------
+extern u_int bk_size;
+
+//------default: 32--------------------------
+//---------chose by user-------------------
+extern u_int bks_per_seg;
+
+extern u_int seg_size;
+
+//??注意应写程序保证若用户输入导致计算出的seg_num非整数则让用户重新输
+//入
+//-----------total seg num-------------
+extern u_int seg_num;
+
+//-----------一个bk 可以存多少bytes的数据-----------
+//----------- in bytes-----------------------------
+extern u_int bk_content_size;
+
+//--------default :4 ------------------
+//------chosen by user----------------
+extern u_int cache_seg_num;
+
+//-------------------------------------------------------------
+extern Inode * inode_ifile;
+
+
+
+
+
+
+
+
 
 // Initialize FS, return value will pass in the fuse_context to all
 // file operations.
@@ -166,7 +221,6 @@ int main(int argc, char *argv[])
     void * super_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     Flash_Read(flash, 0, seg_size, super_seg_buffer); 
 
-   
     //----------for global variables in log.h-----------------------
     Super_seg * super_seg = (Super_seg *)super_seg_buffer;
     
@@ -178,7 +232,6 @@ int main(int argc, char *argv[])
     void * sin_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     Flash_Read(flash, seg_size, seg_size, sin_buffer); 
 
-
     seg_in_memory = (Seg *)sin_buffer;
     Flash_Close(flash);
 
@@ -188,6 +241,7 @@ int main(int argc, char *argv[])
     seg_num = super_seg->seg_num;
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
 
+    inode_ifile = (Inode *)(super_seg_buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
     //-------------------------------------------------------------
    
     

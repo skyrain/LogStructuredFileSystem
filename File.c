@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "File.h"
-#include "log.h"
+//#include "log.h"
 #include <errno.h>
 
 #define FREE_BLOCK_NUM -1
