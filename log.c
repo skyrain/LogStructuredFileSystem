@@ -168,7 +168,7 @@ int Log_Create()
 
     //----------for ifile in checkpoint---------------------
     Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
-    tmp_inode->ino = 5;
+    tmp_inode->ino = -1;
     tmp_inode->filetype = 0;
     tmp_inode->filesize = 0;
     tmp_inode->filename[0] = 'i';
