@@ -17,5 +17,7 @@ int LFS_OpenDir(const char *path, struct fuse_file_info *fi);
 int LFS_Read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 int LFS_Write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 int LFS_Mkdir(const char *dir_name, mode_t mode);
+int LFS_Truncate(const char *path, off_t offset);
+int LFS_Unlink(const char *path);
 
 #endif
