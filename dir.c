@@ -25,7 +25,7 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
     inode_ifile = (Inode *)calloc(1, sizeof(Inode));
     // Init the File layer as well
 	// int normalclose; save for the checkpoint roll forward---???--
-    status = File_Layer_Init(filename, inode_ifile, cachesize);
+    status = 0;//File_Layer_Init(filename, inode_ifile, cachesize);
 	
 	if(status)
 	{
@@ -599,7 +599,7 @@ int Get_New_Ino(){
 	int inum, status;
 
 	// Check for an available inumber
-	inum = 0;
+	inum = 1;
 
 	while(inum < ifile_length && ifile[inum].mode != 0){
 		printf("Mode for inode %i is %i.\n", inum, ifile[inum].mode);
