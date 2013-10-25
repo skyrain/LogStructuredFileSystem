@@ -73,7 +73,8 @@ typedef struct Begin_bk
 typedef struct Seg
 {
     Begin_bk * begin_bk;
-    Block * bk;
+//    Block * bk;
+
 
 }Seg;
 
@@ -150,7 +151,7 @@ typedef struct Checkpoint
     Inode * ifile;
     Seg_usage_table *seg_usage_table;
     u_int curr_time;
-    Seg * last_seg_written;
+    LogAddress * last_log_addr;
 }Checkpoint;
 
 
@@ -266,6 +267,11 @@ int read_cache(LogAddress  * logAddress, u_int length, void * buffer);
 //调用flash.h的函数
 int Log_Create();
 
+void copy_log_to_memory(u_int seg_no, Seg * copy_seg);
+
+void get_log_to_memory(LogAddress * log_addr);
+
+void get_slog_to_memory();
 //-----------------------------------------------------------
 //input: disk 地址，返回长度为length的dis数据于buffer中
 int Log_Read(LogAddress * log_addr, u_int length, void * buffer);

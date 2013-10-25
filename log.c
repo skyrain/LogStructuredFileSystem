@@ -153,13 +153,13 @@ int Log_Create()
     //---------------for checkpoint in super seg-------------
     Checkpoint * cp = (Checkpoint *)calloc(1, sizeof(Checkpoint));
     cp->ifile = s_seg_buffer + bytes_offset + sizeof(Inode *) 
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof (Seg *);
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof (LogAddress *);
     cp->seg_usage_table = s_seg_buffer + bytes_offset + sizeof(Inode *)
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof(Seg *)
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof(LogAddress *)
         + sizeof(Inode);
     cp->curr_time = 0;
-    cp->last_seg_written = s_seg_buffer + bytes_offset + sizeof(Inode *)
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + + sizeof(Seg *)
+    cp->last_log_addr = s_seg_buffer + bytes_offset + sizeof(Inode *)
+        + sizeof(Seg_usage_table *) + sizeof(u_int) + + sizeof(LogAddress *)
         + sizeof(Inode) + sizeof(Seg_usage_table) * (seg_num -1);
     
     memcpy(s_seg_buffer + bytes_offset, cp, sizeof(Checkpoint));
@@ -211,9 +211,15 @@ int Log_Create()
             tmp_sst->next = NULL;
     }
 
-    Seg * tmp_seg = (Seg *)calloc(1, sizeof(Seg));
-    memcpy(s_seg_buffer + bytes_offset, tmp_seg, sizeof(Seg));
-    free(tmp_seg);
+    //---------for last seg-------------------------
+    LogAddress * lld = (LogAddress *)calloc(1, sizeof(LogAddress));
+   
+    //---------下次从 (1, 1)开始写------------------------
+    lld->seg_no = 1;
+    lld->bk_no = 1;
+
+    memcpy(s_seg_buffer + bytes_offset, lld, sizeof(LogAddress));
+    free(lld);
 
     Flash_Write(flash, 0, seg_size, s_seg_buffer);    
     //-----------------------------------------------------------
@@ -229,8 +235,8 @@ int Log_Create()
         
         Seg * ts = (Seg *)calloc(1, sizeof(Seg));
         ts->begin_bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *);
-        ts->bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *) 
-            + sizeof(Begin_bk); 
+ //       ts->bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *) 
+//            + sizeof(Begin_bk); 
         memcpy(n_seg_buffer, ts, sizeof(Seg));
         bytes_offset += sizeof(Seg);
 
@@ -267,7 +273,7 @@ int Log_Create()
             else
                 sse->next = NULL;
         }
-        
+/*        
         //-------------normal bk-----------------------------
         //---start offset: seg_start + bk_size * FLASH_SECTOR_SIZE
         for(j = 1; j < bks_per_seg; j++)
@@ -277,7 +283,7 @@ int Log_Create()
             b->bk_content = n_seg_buffer + 
                 j * bk_size * FLASH_SECTOR_SIZE + sizeof(void *);
         } 
-
+*/
         Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
         free(n_seg_buffer);   
     }
@@ -454,7 +460,6 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
     {
         if(bks_tobe_read <= bks_remain)
         {
-            //??need calloc before use buffer to this func? 
             void * new_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
 
             //Read the entire seg which contains the data
@@ -463,12 +468,11 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
             memcpy(buffer + buffer_offset, new_buffer
                     + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, length);
-
+            free(new_buffer);
             read_done = true;
         }
         else
         {
-            //??need calloc before use buffer to this func? 
             void * new_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
 
             Flash_Read(flash, sec_offset, seg_size, new_buffer);
@@ -476,7 +480,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
             memcpy(buffer + buffer_offset, new_buffer
                     + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, 
                     bks_remain * bk_size * FLASH_SECTOR_SIZE);
-            
+            free(new_buffer); 
             sec_offset += seg_size;
 
             buffer_offset += bks_remain * bk_size * FLASH_SECTOR_SIZE;
@@ -527,6 +531,8 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
         {
             if(!c_walker->IS_JUST_UPDATE)
             {
+
+/*                
                 //??need calloc before use buffer to this func? 
                 void * new_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
                 //choose the model of Flash
@@ -536,8 +542,13 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
                 flash = Flash_Open(fl_file, flags, blocks); 
                 Flash_Read(flash, segs_read[i] * seg_size, seg_size, new_buffer);
                 Flash_Close(flash);
+*/              
+                Seg * copy_seg;// = (Seg *)calloc(1, sizeof(Seg));
+                copy_log_to_memory(segs_read[i], copy_seg);
+
                 free(c_walker->seg);
-                c_walker->seg = (Seg *)new_buffer;
+
+                c_walker->seg = copy_seg;
 
                 c_walker->IS_JUST_UPDATE = true;
                 break;
@@ -552,6 +563,55 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
 }
 
+//----------copy seg into memory for cache use -----------
+//---------- to be written data---------------------------
+void copy_log_to_memory(u_int seg_no, Seg * copy_seg)
+{
+    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
+    u_int tmp = bks_per_seg * seg_num;
+    u_int * blocks = &tmp;
+    Flash flash = Flash_Open(fl_file, flags, blocks); 
+    Flash_Read(flash, seg_no * seg_size, seg_size, buffer);
+
+    Flash_Close(flash);
+
+    //--------reconstruct the segment to memory from disk-------------    
+    u_int bytes_offset = 0;
+    copy_seg = (Seg *)buffer;
+    copy_seg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+    copy_seg->begin_bk->seg_no = seg_no;
+    copy_seg->begin_bk->ssum_bk =
+        (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+    
+    bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
+    copy_seg->begin_bk->ssum_bk->bk_no = 0;
+    bytes_offset += sizeof(Seg_sum_bk);
+    
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
+    copy_seg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
+ 
+    u_int i;
+    for(i = 1; i < bks_per_seg; i++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
+        
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = buffer + bytes_offset;
+        else
+            sse->next = NULL;
+
+        memcpy(sse_walker, sse, sizeof(Seg_sum_entry));
+//--?? 可能memory leak----------
+//         sse_walker = sse;
+        sse_walker = sse_walker->next;
+    }
+
+}
+
+
 //----------grab one seg from flash memory into disk-------
 //---------- to be written data---------------------------
 void get_log_to_memory(LogAddress * log_addr)
@@ -559,16 +619,120 @@ void get_log_to_memory(LogAddress * log_addr)
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
-    u_int tmp = bks_per_seg * super_seg->seg_num;
+    u_int tmp = bks_per_seg * seg_num;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
     Flash_Read(flash, log_addr->seg_no * seg_size, seg_size, buffer);
+
     Flash_Close(flash);
 
-    free(seg_in_memory);
-    seg_in_memory = (Seg *)buffer; 
+    if(seg_in_memory != NULL)
+        free(seg_in_memory);
+    
+    //--------reconstruct the segment to memory from disk-------------    
+    u_int bytes_offset = 0;
+    seg_in_memory = (Seg *)buffer;
+    seg_in_memory->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+    seg_in_memory->begin_bk->seg_no = log_addr->seg_no;
+    seg_in_memory->begin_bk->ssum_bk =
+        (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+    
+    bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
+    seg_in_memory->begin_bk->ssum_bk->bk_no = 0;
+    bytes_offset += sizeof(Seg_sum_bk);
+    
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
+    seg_in_memory->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
+ 
+    u_int i;
+    for(i = 1; i < bks_per_seg; i++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
+        
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = buffer + bytes_offset;
+        else
+            sse->next = NULL;
+
+        memcpy(sse_walker, sse, sizeof(Seg_sum_entry));
+//--?? 可能memory leak----------
+//         sse_walker = sse;
+        sse_walker = sse_walker->next;
+    }
 
 }
+
+
+void get_slog_to_memory()
+{
+    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash flash = Flash_Open(fl_file, flags, blocks); 
+    Flash_Read(flash, 0, seg_size, buffer);
+    Flash_Close(flash);
+    
+    //--------reconstruct the segment to memory from disk-------------    
+    u_int bytes_offset = 0;
+    super_seg = (Super_seg *)buffer;
+    bytes_offset += sizeof(Super_seg);
+    super_seg->seg_usage_table = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table)); 
+
+    //-------for seg usage table---------------
+    Seg_usage_table * sut_walker = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
+    super_seg->seg_usage_table = sut_walker;
+   
+    u_int i;
+    for(i = 1; i < seg_num; i++)
+    {
+        Seg_usage_table * sut = (Seg_usage_table *)(buffer + bytes_offset);
+        bytes_offset += sizeof(Seg_usage_table);
+        if(i != seg_num -1 )
+            sut->next = buffer + bytes_offset;
+        else
+            sut->next = NULL;
+
+
+        memcpy(sut_walker, sut, sizeof(Seg_usage_table));
+        sut_walker = sut_walker->next;
+    }
+
+    //-------for checkpoint-----------------
+    super_seg->checkpoint = (Checkpoint *)calloc(1, sizeof(Checkpoint));
+    bytes_offset += sizeof(Checkpoint);
+
+    super_seg->checkpoint->ifile = (Inode *)calloc(1, sizeof(Inode));
+    memcpy(super_seg->checkpoint->ifile , (Inode *)(buffer + bytes_offset)
+            , sizeof(Inode));
+    bytes_offset += sizeof(Inode);
+
+    //-------for seg usage table---------------
+    Seg_usage_table * sut_walker_1 = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
+    super_seg->checkpoint->seg_usage_table = sut_walker_1;
+
+    for(i = 1; i < seg_num; i++)
+    {
+        Seg_usage_table * sut = (Seg_usage_table *)(buffer + bytes_offset);
+        bytes_offset += sizeof(Seg_usage_table);
+        if(i != seg_num -1 )
+            sut->next = buffer + bytes_offset;
+        else
+            sut->next = NULL;
+
+
+        memcpy(sut_walker_1, sut, sizeof(Seg_usage_table));
+        sut_walker_1 = sut_walker_1->next;
+    }
+
+    //--------for last log addr---------
+    super_seg->checkpoint->last_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
+    memcpy(super_seg->checkpoint->last_log_addr, buffer + bytes_offset,
+            sizeof(LogAddress)); 
+}
+
 
 
 //-------------assist func--------------------------------------
@@ -627,6 +791,8 @@ void pushToDisk(LogAddress * log_addr)
         Flash_Close(flash);
     }
 }
+
+
 
 //-------------------write data log's one block---------------
 //------ now   always   write 1 block size in bytes---------------

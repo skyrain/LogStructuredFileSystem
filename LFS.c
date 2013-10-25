@@ -172,6 +172,9 @@ int main(int argc, char *argv[])
     filename = (char *)calloc(1, 8);
     strcpy(filename, argv[argc - 2]);
 
+    fl_file = (char *)calloc(1, 8);
+    strcpy(fl_file, filename);
+
     //print all the arguments
     for(i = 0; i < argc; i++)
     {
@@ -205,10 +208,10 @@ int main(int argc, char *argv[])
     //------------------if use fclose() 为毛有错 ????------------
     //---------暂时先不用----------------------------------------
     //  fclose(fp);
-    sec_num = (u_int)atoi(store_sec_num);
-
+    sec_num = (u_int)atoi(store_sec_num); 
     free(config);
 
+/*    
     //--- 2.  read super seg------------------------------- 
     Flash_Flags flags = FLASH_SILENT;
 
@@ -223,25 +226,33 @@ int main(int argc, char *argv[])
 
     //----------for global variables in log.h-----------------------
     Super_seg * super_seg = (Super_seg *)super_seg_buffer;
-    
+*/
+    seg_num = sec_num / seg_size;
+    get_slog_to_memory();
+
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
 
     tail_log_addr->seg_no = 1;
     tail_log_addr->bk_no =1;
 
-    void * sin_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    Flash_Read(flash, seg_size, seg_size, sin_buffer); 
-
-    seg_in_memory = (Seg *)sin_buffer;
-    Flash_Close(flash);
-
     sec_num = super_seg->sec_num;
     bk_size= super_seg->bk_size;
     bks_per_seg = seg_size / bk_size;
-    seg_num = super_seg->seg_num;
+
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
 
-    inode_ifile = (Inode *)(super_seg_buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
+//    inode_ifile = (Inode *)(super_seg_buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
+
+    inode_ifile = super_seg->checkpoint->ifile;
+
+
+/*
+    void * sin_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    Flash_Read(flash, seg_size, seg_size, sin_buffer); 
+    seg_in_memory = (Seg *)sin_buffer;
+*/
+
+    get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------
    
     
