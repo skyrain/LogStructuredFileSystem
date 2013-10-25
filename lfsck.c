@@ -6,8 +6,6 @@
 
 Seg_sum_entry *segSumEntry;
 Seg_sum_bk *segSumBk;
-LogAddress *LogAddr;
-Super_seg *Super_seg;
 
 //segment usage, block usage 
 Seg_usage_table *SegUsageTable;
@@ -19,8 +17,9 @@ Seg_sum_entry *SegBlockTable;
 int *usedInodes;
 int numUsedInodes;
 int lengthIFile;
-extern seg_num;
-extern bk_per_seg;
+u_int seg_num;
+int bk_per_seg;
+extern Super_seg* super_seg;
 
 static void print_usage(){
 	printf( "USAGE\n" );
@@ -30,26 +29,22 @@ int Check_Block(int inum, int file_blocknum, Block_pointer *blockPointer){
 
 	int segnum, blocknum;
 	segnum = blockPointer->seg_no;
-	blocknum = blockPointer->bk_seg;
+	blocknum = blockPointer->bk_no;
 	
 	int i;
 	for(i=1; i<segnum; i++)
 	{
 		//Find the number segnum table
-		SegUsageTable = SegUsageTable->next
-		SegBlockTable = SegBlockTable->next
+		SegUsageTable = SegUsageTable->next;
+		SegBlockTable = SegBlockTable->next;
 	}
 	
 	if (segnum >=  seg_num ){
 		printf("Inum %i: ERROR in file.\n", inum);
-		printf("    Block %i is in segment %i but there are only %i segments in the disk\n",
-					file_blocknum, segnum, _thisLog.metadata.numsegments);
 		return 1;
 	} else if (segnum >= 0){
 		if(blocknum >= bk_per_seg){
 			printf("Inum %i: ERROR in file.\n", inum);
-			printf(" Error :Block %i is in segment %i block %i but there are only %i blocks in a segment.\n",
-					file_blocknum, segnum, blocknum, _thisLog.metadata.segmentsize);
 			return 1;
 		//check the blockUsage, file_no and inum, file block num
 		// compare log addr with
@@ -112,14 +107,51 @@ int main(int argc, char *argv[])
 	Inode *rootNode;
 	char *block_buff; // Can hold one block of data
 	Inode *myNode; // This buffer will hold the ifile
-	Inode *ifile
+	Inode *ifile;
+	int ROOT_INO = 0;
+
+	char* buffer = get_current_dir_name();
+	char * s = "/config.ini";
+   	char * config = (char *)calloc(1, strlen(buffer) + strlen(s));
+	strcpy(config, buffer);
+	strcpy(config + strlen(buffer), s);
+
+      	FILE *fp;
+
+	if((fp=fopen(config,"rb")) == NULL)
+	{
 	
-	//get the super segment init ifile and seg_num.
-	Seg *SuperSeg;
-	copy_log_to_memory(0, *SuperSeg)
-	seg_num = SuperSeg->seg_num;
+		printf("\nopen file error");
+
+		exit(1);
+
+	}
+
+	char store_seg_size[5];
+	fgets(store_seg_size, 5, fp);
+	seg_size = (u_int)atoi(store_seg_size);
+
+
 	
-	ifile = SuperSeg -> checkpoint -> ifile;
+	char store_sec_num[5];
+
+	fgets(store_sec_num, 5, fp);
+
+	
+	//------------------if use fclose() 为毛有错 ????------------
+
+	//    //---------暂时先不用----------------------------------------
+
+	//        //  fclose(fp);
+	sec_num = (u_int)atoi(store_sec_num);
+
+	free(config);
+	//
+
+	seg_num = sec_num / seg_size;
+	get_slog_to_memory();
+	
+	ifile = super_seg -> checkpoint -> ifile;
 	
 	 // one required argument: (first arg is executable name)
 	 //	-filename for the flash file
@@ -141,16 +173,16 @@ int main(int argc, char *argv[])
 	*/
 	
 	// ---???--- ifile
-	if (ifile.filesize == 0){
-		printf("LFS not fully initialized. Please run LFS before checking.\n");
-		return 1;
-	}
+	//if (ifile->filesize == 0){
+	//	printf("LFS not fully initialized. Please run LFS before checking.\n");
+	//	return 1;
+	//}
 	
 	// Another functions ??
 	// Allocate the block buffer
 
 	// Get the root Inode
-	status = _Get_Inode_From_Inum(ROOT_INUM, &rootNode);
+	status = Get_Inode_From_Inum(0, &rootNode);
 	if (status){
 		printf("ERROR getting root Inode.\n");
 		return status;
@@ -163,13 +195,12 @@ int main(int argc, char *argv[])
 		printf("ERROR in ifile.\n");
 	}
 
-	lengthIFile = ifile.filesize / (sizeof(Inode));
+	lengthIFile = ifile->filesize / (sizeof(Inode));
 	usedInodes = (int *) calloc(sizeof(int), lengthIFile);
 	numUsedInodes = 0;
 
 
 	// ---???--- Check the directory structure in phase 2
-	
 	// Check segment usage table
 	// Initialize the segment usage table
 	
@@ -177,7 +208,7 @@ int main(int argc, char *argv[])
 	Seg_sum_entry *SegBlockTable;
 
 	SegUsageTable = (Seg_usage_table *)calloc(1,sizeof(Seg_usage_table));
-	SegBlockTable = Super_seg -> seg_usage_table;
+	SegBlockTable = super_seg -> seg_usage_table;
 
 	/*
 	printf("Checking the segment usage table...\n");
