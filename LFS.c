@@ -133,6 +133,18 @@ int LFS_Mkdir(const char *dir_name, mode_t mode)
     return Dir_mkdir(dir_name, mode, context->uid, context->gid);
 }
 
+int LFS_Truncate(const char *path, off_t offset)
+{
+        printf("LFS is truncating. \n");
+        return Dir_Truncate_File(path, offset);
+}
+
+int LFS_Unlink(const char *path)
+{
+        printf("delete a file \n");
+        return Dir_Delete_File(path);
+}
+
 static struct fuse_operations LFS_oper = {
     .init = LFS_Init,
     .create = LFS_Create,
@@ -141,6 +153,8 @@ static struct fuse_operations LFS_oper = {
     .read = LFS_Read,
     .write = LFS_Write,
     .mkdir = LFS_Mkdir,
+    .truncate = LFS_Truncate,
+    .unlink = LFS_Unlink,
 };
 
 
