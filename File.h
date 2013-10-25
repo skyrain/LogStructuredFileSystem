@@ -10,6 +10,9 @@
 #include "log.h"
 #include <sys/types.h>
 
+u_int BLOCK_SIZE;
+
+
 /*
 extern struct Block;
 extern struct Seg_sum_entry;

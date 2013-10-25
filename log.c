@@ -294,11 +294,16 @@ int Log_Create()
 }
 
 //---------------create cache---------------------------------------
+//----initially get the first cache_seg_num into memory----------
 int create_cache()
 {
     Disk_cache *cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
     cache_start->cache_no = 0;
-    cache_start->seg = (Seg *)calloc(1, sizeof(Seg));
+    
+    void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    copy_log_to_memory(1, tbuffer);
+    cache_start->seg = (Seg *)tbuffer;
+
     cache_start->IS_JUST_UPDATE = false;
     cache_start->next = NULL;
 
@@ -309,7 +314,10 @@ int create_cache()
     {
         Disk_cache * tmp = (Disk_cache *)calloc(1, sizeof(Disk_cache));
         tmp->cache_no = i;
-        tmp->seg = (Seg *)calloc(1, sizeof(Seg));
+        
+        void * tb = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+        copy_log_to_memory(i + 1, tb);
+        cache_start->seg = (Seg *)tb;
         tmp->IS_JUST_UPDATE = false;
         tmp->next = NULL;
 
@@ -543,12 +551,12 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
                 Flash_Read(flash, segs_read[i] * seg_size, seg_size, new_buffer);
                 Flash_Close(flash);
 */              
-                Seg * copy_seg;// = (Seg *)calloc(1, sizeof(Seg));
-                copy_log_to_memory(segs_read[i], copy_seg);
+                void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+                copy_log_to_memory(segs_read[i], tbuffer);
 
                 free(c_walker->seg);
 
-                c_walker->seg = copy_seg;
+                c_walker->seg = (Seg *)tbuffer;
 
                 c_walker->IS_JUST_UPDATE = true;
                 break;
@@ -565,7 +573,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
 //----------copy seg into memory for cache use -----------
 //---------- to be written data---------------------------
-void copy_log_to_memory(u_int seg_no, Seg * copy_seg)
+void copy_log_to_memory(u_int seg_no, void * copy_seg)
 {
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     //choose the model of Flash
@@ -579,18 +587,18 @@ void copy_log_to_memory(u_int seg_no, Seg * copy_seg)
 
     //--------reconstruct the segment to memory from disk-------------    
     u_int bytes_offset = 0;
-    copy_seg = (Seg *)buffer;
-    copy_seg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
-    copy_seg->begin_bk->seg_no = seg_no;
-    copy_seg->begin_bk->ssum_bk =
+    Seg* tseg = (Seg *)buffer;
+    tseg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+    tseg->begin_bk->seg_no = seg_no;
+    tseg->begin_bk->ssum_bk =
         (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
     
     bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
-    copy_seg->begin_bk->ssum_bk->bk_no = 0;
+    tseg->begin_bk->ssum_bk->bk_no = 0;
     bytes_offset += sizeof(Seg_sum_bk);
     
     Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
-    copy_seg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
+    tseg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
  
     u_int i;
     for(i = 1; i < bks_per_seg; i++)
@@ -609,6 +617,8 @@ void copy_log_to_memory(u_int seg_no, Seg * copy_seg)
         sse_walker = sse_walker->next;
     }
 
+    memcpy(copy_seg, tseg, seg_size * FLASH_SECTOR_SIZE);
+    free(tseg);
 }
 
 

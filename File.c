@@ -12,11 +12,16 @@
 //#include "log.h"
 #include <errno.h>
 
+
+//--------?? log.h already has this-------
+#define DIRECT_BK_NUM 4
+
 #define FREE_BLOCK_NUM -1
 #define READ_ERROR -2
 // temp
-#define BLOCK_SIZE bk_content_size
+//#define 
 
+//u_int BLOCK_SIZE;
 //extern Log_Read(u_int disk_seg, u_int disk_bk_no, u_int length, void *buffer); 
 
 int File_Init(Inode *Ino, int type)
@@ -145,7 +150,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// next define where start to write, if offset out of range
 	// write at the last block of the file
 	int fileEndBlock = Ino->filesize / BlockSize_byte;
-	if(Ino->filesize % BlockSize_byte == 0 )
+	if((Ino->filesize % BlockSize_byte == 0 )&& fileEndBlock != 0)
 		fileEndBlock --;
 
 	int writeStartBlock;
@@ -402,6 +407,7 @@ int File_Truncate(Inode *myNode, off_t offset)
 
 void File_Layer_Destroy()
 {
+    ;
 //	Log_Destroy();
 }
 
@@ -418,19 +424,26 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 }
 
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.
-void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *Block_pointer)
+void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 {
 	// beyond the current file
-	if(BlockNumber * BLOCK_SIZE > Ino->filesize  )
+	if((BlockNumber * BLOCK_SIZE) > Ino->filesize)
 	{
-		Block_pointer->seg_no = FREE_BLOCK_NUM;
-		Block_pointer->bk_no = FREE_BLOCK_NUM;
+		bp->seg_no = FREE_BLOCK_NUM;
+		bp->bk_no = FREE_BLOCK_NUM;
 	}
 
 	if(BlockNumber < DIRECT_BK_NUM)
 	{ 
-		memcpy(Block_pointer, Ino->direct_bk + BlockNumber, sizeof(Block_pointer));
-	}
+		//memcpy(bp, Ino->direct_bk + BlockNumber, sizeof(Block_pointer));
+        //Block_pointer * test;
+        
+        Block_pointer* tbp = (Block_pointer *)calloc(1, sizeof(Block_pointer));
+        tbp->seg_no = tail_log_addr->seg_no;
+        tbp->bk_no = tail_log_addr->bk_no;
+        memcpy(bp, tbp, sizeof(Block_pointer));
+        free(tbp);
+   }
 	else
 	{
 		printf("BlockNumber out of DIRECT_BK_NUM\n");

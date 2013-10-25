@@ -20,6 +20,7 @@
 #include "log.h"      
 #include "LFS.h"
 #include "flash.h"
+#include "File.h"
 
 //----------------gloabal value-----------------------
 extern Super_seg * super_seg;
@@ -254,7 +255,7 @@ int main(int argc, char *argv[])
     bks_per_seg = seg_size / bk_size;
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
-
+    BLOCK_SIZE = bk_content_size;
 //    inode_ifile = (Inode *)(super_seg_buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
 
     inode_ifile = super_seg->checkpoint->ifile;

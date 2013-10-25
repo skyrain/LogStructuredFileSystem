@@ -95,7 +95,8 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
 
 	DirEntry currentDir[2];
-	Inode *dirNode; //= (Inode *)calloc(1,sizeof(Inode));
+    //???
+	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
 	Inode *parentDirNode; //= (Inode *)calloc(1,sizeof(Inode));
 	struct fuse_file_info *fi = NULL;
 	// Create a directory and get its inode to init
@@ -104,8 +105,11 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	Dir_Create_File(dir_name, mode, uid, gid, fi);
 	
 	Get_Inode(dir_name, &dirNode);
-
-	// ADd . and .. to this directory
+   
+    //?????????? 
+    dirNode->ino = 0;
+	
+    // ADd . and .. to this directory
 	strcpy(currentDir[1].filename, "..");
 	// if this dir is the root dir then..
 	if(strcmp(dir_name, "/") ==0 )
@@ -359,8 +363,10 @@ int Flush_Ino(int inum)
 {
 	if(inum >= ifile_length)
 		return -ENOENT;
-
-	return File_Write(inode_ifile, inum*sizeof(Inode), sizeof(Inode), &ifile[inum]);
+   
+    void * bf = calloc(1, sizeof(Inode));
+    memcpy(bf, &ifile[inum], sizeof(Inode));
+    return File_Write(inode_ifile, inum*sizeof(Inode), sizeof(Inode), bf);
 }
 
 int Add_File_To_Directory(const char *path, int inum)
@@ -538,10 +544,10 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
         if (breakpath == path){                                                                            
                 // This is root   
                 *returnNode = &ifile[ROOT_INUM];
-                if (strlen(&path[1])> FILE_NAME_LENGTH){
+                if (strlen(&path[0])> FILE_NAME_LENGTH){
                         return -EBADF; // Error bad file descriptor
                 }        
-                strcpy(filename, &path[1]);                                                                
+                strcpy(filename, &path[0]);                                                                
         }else if (breakpath){             
                 // Not root, make _Get_Inode do its job                                                    
                 dirpath = (char *) malloc(breakpath - path + 1);
@@ -599,7 +605,7 @@ int Get_New_Ino(){
 	int inum, status;
 
 	// Check for an available inumber
-	inum = 1;
+	inum = 0;
 
 	while(inum < ifile_length && ifile[inum].mode != 0){
 		printf("Mode for inode %i is %i.\n", inum, ifile[inum].mode);
