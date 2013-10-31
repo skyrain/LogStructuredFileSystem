@@ -237,6 +237,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		tailaddr = tail_log_addr;
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
 		status  = Log_Write(Ino->ino, writeBlock, BlockSize_byte, writePointer, tailaddr);
+		Ino->direct_bk[writeBlock].seg_no = tailaddr.seg_no;
+		Ino->direct_bk[writeBlock].bk_no = tailaddr.bk_no;
 		if(status)
 		{
 			printf("fail to write on the log, Log_Write\n");
@@ -266,6 +268,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		Ino->filesize = offset + length;
 	}
 	
+	/*
 	int i;
 	for(i=0; i < numBlocks; i++)
 	{
@@ -279,6 +282,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		// else , indirect block phase 2 ---???---
 		
 	}
+	*/
 
 	time_t t;
 	time(&t);
@@ -303,7 +307,8 @@ int File_Free(Inode *Ino)
 		printf("ERROR: when dropping the file");
 		return status;
 	}
-
+	
+	// ifile delete can be modified as linked list, to save the space but waste the time.
 	memset(Ino, 0, sizeof(Inode));
 
 	return 0;
