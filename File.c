@@ -232,11 +232,11 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		// write the orginal file which file block number is AddrWrite.bk_no
 		// to the tail of the segment
 		Get_Block_pointer(Ino, writeBlock, &blockPointer);
-		AddrWrite.seg_no = blockPointer.seg_no;
-		AddrWrite.bk_no = blockPointer.bk_no;
+		//AddrWrite.seg_no = blockPointer.seg_no;
+		//AddrWrite.bk_no = blockPointer.bk_no;
 		tailaddr = tail_log_addr;
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
-		status  = Log_Write(Ino->ino, AddrWrite.bk_no, BlockSize_byte, writePointer, tailaddr);
+		status  = Log_Write(Ino->ino, writeBlock, BlockSize_byte, writePointer, tailaddr);
 		if(status)
 		{
 			printf("fail to write on the log, Log_Write\n");
