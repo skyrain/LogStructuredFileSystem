@@ -36,9 +36,9 @@ typedef struct Block
 //it contaiins which file's which file block data
 typedef struct Seg_sum_entry
 {
-    u_int bk_no;
-    u_int file_no;            
-    u_int file_bk_no;
+    int bk_no;
+    int file_no;            
+    int file_bk_no;
     struct Seg_sum_entry * next;
 
 }Seg_sum_entry;
@@ -47,7 +47,7 @@ typedef struct Seg_sum_entry
 typedef struct Seg_sum_bk
 {
     //该Seg_sum_bk存在seg的哪一个block里面
-    u_int bk_no;        
+    int bk_no;        
     Seg_sum_entry * seg_sum_entry;
 
     //之后加入uid用于判断一个seg的某个block是否alive
@@ -62,7 +62,7 @@ typedef struct Begin_bk
 {
     //------------contains the seg_no ----------
     //----------in begin bk---------------------
-    u_int seg_no;
+    int seg_no;
 
     //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk  * ssum_bk; 
@@ -80,8 +80,8 @@ typedef struct Seg
 
 typedef struct LogAddress
 {
-    u_int seg_no;
-    u_int bk_no;
+    int seg_no;
+    int bk_no;
 
 }LogAddress;
 
@@ -90,10 +90,10 @@ typedef struct LogAddress
 //检查每一个seg，知道其利用率
 typedef struct Seg_usage_table
 {
-    u_int seg_no;
+    int seg_no;
 
     //--------- bks that used now in the seg-------
-    u_int num_live_bk;
+    int num_live_bk;
     //u_int num_live_bytes; // should not be num of live blocks???
     
     time_t modify_time;
@@ -108,19 +108,19 @@ typedef struct Block_pointer
 {
     //------- file bk size in sectors--------
     //------actually in flash memory: 1 sector is its 1 block-------
-    u_int seg_no;
-    u_int bk_no;
+    int seg_no;
+    int bk_no;
 }Block_pointer;
 
 
 typedef struct Inode
 {
-    u_int ino;
+    int ino;
 
     //    u_int seg_no_in_log;//this inode is stored in which seg of log
     //    u_int bk_no_in_log;//this inode is stored in which block of log
-    u_int filetype;
-    u_int filesize;
+    int filetype;
+    int filesize;
     char filename[FILE_NAME_LENGTH + 1]; //phase 1
 
     //flash address of the inode's blocks
@@ -135,7 +135,7 @@ typedef struct Inode
     time_t access_Time;
     time_t create_Time;
     time_t change_Time;
-    u_int num_links;
+    int num_links;
 
 }Inode;
 
@@ -150,7 +150,7 @@ typedef struct Checkpoint
 {
     Inode * ifile;
     Seg_usage_table *seg_usage_table;
-    u_int curr_time;
+    time_t curr_time;
     LogAddress * last_log_addr;
 }Checkpoint;
 
@@ -160,7 +160,7 @@ typedef struct Checkpoint
 //super log segment 存整个log的信息和checkpoint等
 typedef struct Super_seg
 {
-    u_int seg_no;
+    int seg_no;
     u_int seg_num;      
     u_int seg_size;
     u_int bk_size;
@@ -182,12 +182,12 @@ typedef struct Super_seg
 //大小以flash memory的seg为单位
 typedef struct Disk_cache
 {
-    u_int cache_no;
+    int cache_no;
 
     //this cache is from which seg
     Seg * seg;
 
-    u_int IS_JUST_UPDATE;
+    bool IS_JUST_UPDATE;
 
     struct Disk_cache * next;
 
@@ -267,7 +267,7 @@ int read_cache(LogAddress  * logAddress, u_int length, void * buffer);
 //调用flash.h的函数
 int Log_Create();
 
-void copy_log_to_memory(u_int seg_no, void * copy_seg);
+void copy_log_to_memory(int seg_no, void * copy_seg);
 
 void get_log_to_memory(LogAddress * log_addr);
 
@@ -281,7 +281,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer);
 //将文件的inum(inode)的第block号块写入log,写入内容
 //----------------------input--------------------------------------
 //--------input: block - bk_no within the file
-int Log_Write(u_int inum, u_int block, u_int length,
+int Log_Write(int inum, int block, u_int length,
          void * buffer, LogAddress * log_addr);
 
 //--------------------------------------------------------------------

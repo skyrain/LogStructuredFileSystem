@@ -52,24 +52,6 @@ u_int cache_seg_num;
 //-------------------------------------------------------------
 */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /*
  *
  *?? means not for sure or need improve in future
@@ -82,7 +64,7 @@ u_int cache_seg_num;
 //suppose: log layer's seg size and block size same as flash layer
 int Log_Create()
 {
-    u_int i;
+    int i;
     //--------------------------------------------------------------
     //-----1st log seg is super log seg----------------------------
     //-------data seg start from 1 ---------------------------
@@ -125,9 +107,9 @@ int Log_Create()
     s_seg->bk_size = bk_size;
     s_seg->wearlimit = wearlimit;
     s_seg->sec_num = sec_num;
-    s_seg->seg_usage_table = s_seg_buffer + sizeof(u_int) * 6 
+    s_seg->seg_usage_table = s_seg_buffer + sizeof(u_int) * 5 + sizeof(int) 
         + sizeof(Seg_usage_table *) + sizeof(Checkpoint *);  
-    s_seg->checkpoint = s_seg_buffer + sizeof(u_int) * 6
+    s_seg->checkpoint = s_seg_buffer + sizeof(u_int) * 5 + sizeof(int)
         + sizeof(Seg_usage_table *) + sizeof(Checkpoint *) 
         + (seg_num - 1) * sizeof(Seg_usage_table);
      
@@ -153,13 +135,13 @@ int Log_Create()
     //---------------for checkpoint in super seg-------------
     Checkpoint * cp = (Checkpoint *)calloc(1, sizeof(Checkpoint));
     cp->ifile = s_seg_buffer + bytes_offset + sizeof(Inode *) 
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof (LogAddress *);
+        + sizeof(Seg_usage_table *) + sizeof(time_t) + sizeof (LogAddress *);
     cp->seg_usage_table = s_seg_buffer + bytes_offset + sizeof(Inode *)
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + sizeof(LogAddress *)
+        + sizeof(Seg_usage_table *) + sizeof(time_t) + sizeof(LogAddress *)
         + sizeof(Inode);
     cp->curr_time = 0;
     cp->last_log_addr = s_seg_buffer + bytes_offset + sizeof(Inode *)
-        + sizeof(Seg_usage_table *) + sizeof(u_int) + + sizeof(LogAddress *)
+        + sizeof(Seg_usage_table *) + sizeof(time_t) + + sizeof(LogAddress *)
         + sizeof(Inode) + sizeof(Seg_usage_table) * (seg_num -1);
     
     memcpy(s_seg_buffer + bytes_offset, cp, sizeof(Checkpoint));
@@ -245,7 +227,7 @@ int Log_Create()
         //--------begin bk----------------------------------
         Begin_bk * bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
         bb->seg_no = i;
-        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(u_int)
+        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(int)
             + sizeof(Seg_sum_bk *);
         memcpy(n_seg_buffer, bb, sizeof(Begin_bk));
         bytes_offset += sizeof(Begin_bk);
@@ -253,13 +235,13 @@ int Log_Create()
         
         Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
         ssb->bk_no = 0;
-        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(u_int)
+        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(int)
             + sizeof(Seg_sum_entry *);
         memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
         bytes_offset += sizeof(Seg_sum_bk);
         free(ssb);
         
-        u_int j;
+        int j;
         for(j = 1; j < bks_per_seg; j++)
         {
             Seg_sum_entry * sse = (Seg_sum_entry *)(n_seg_buffer
@@ -309,7 +291,7 @@ int create_cache()
 
     disk_cache = cache_start;
 
-    u_int i;
+    int i;
     for(i = 1; i < cache_seg_num; i++)
     {
         Disk_cache * tmp = (Disk_cache *)calloc(1, sizeof(Disk_cache));
@@ -458,7 +440,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
     u_int segs_read[segs_tobe_read];
     
-    u_int i;
+    int i;
     for(i = 0; i < segs_tobe_read; i++)
     {
         segs_read[i] = log_addr->seg_no + i;
@@ -573,7 +555,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
 //----------copy seg into memory for cache use -----------
 //---------- to be written data---------------------------
-void copy_log_to_memory(u_int seg_no, void * copy_seg)
+void copy_log_to_memory(int seg_no, void * copy_seg)
 {
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     //choose the model of Flash
@@ -600,7 +582,7 @@ void copy_log_to_memory(u_int seg_no, void * copy_seg)
     Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
     tseg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
  
-    u_int i;
+    int i;
     for(i = 1; i < bks_per_seg; i++)
     {
         Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
@@ -654,7 +636,7 @@ void get_log_to_memory(LogAddress * log_addr)
     Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
     seg_in_memory->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
  
-    u_int i;
+    int i;
     for(i = 1; i < bks_per_seg; i++)
     {
         Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
@@ -695,7 +677,7 @@ void get_slog_to_memory()
     Seg_usage_table * sut_walker = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table));
     super_seg->seg_usage_table = sut_walker;
    
-    u_int i;
+    int i;
     for(i = 1; i < seg_num; i++)
     {
         Seg_usage_table * sut = (Seg_usage_table *)(buffer + bytes_offset);
@@ -807,7 +789,7 @@ void pushToDisk(LogAddress * log_addr)
 //-------------------write data log's one block---------------
 //------ now   always   write 1 block size in bytes---------------
 //-------each time call the log_write func----------------
-void writeToLog(u_int inum, u_int block, void * buffer, LogAddress * log_addr)
+void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
 {
     //---change the log_addr's content------------
     memcpy(seg_in_memory + bk_size * log_addr->bk_no * FLASH_SECTOR_SIZE,
@@ -828,7 +810,7 @@ void writeToLog(u_int inum, u_int block, void * buffer, LogAddress * log_addr)
     }
 
     //-------update seg usage table------------------
-    u_int i;
+    int i;
     Seg_usage_table * sut_walker = super_seg->seg_usage_table;
     for(i = 0; i < seg_num; i++)
     {
@@ -853,7 +835,7 @@ void writeToLog(u_int inum, u_int block, void * buffer, LogAddress * log_addr)
 //--------input: length - always = fl_bk_size;
 //-----------!!! 一次只写一个 block的数据--------------------------
 //--------input: block - bk no within the file
-int Log_Write(u_int inum, u_int block, u_int length, 
+int Log_Write(int inum, int block, u_int length, 
         void * buffer, LogAddress * log_addr)
 {
     writeToLog(inum, block, buffer, log_addr);
