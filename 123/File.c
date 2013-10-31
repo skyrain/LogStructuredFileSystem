@@ -65,7 +65,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		return status;
 
 	// where the file end in block.
-	int BlockSize_byte = BLOCK_SIZE;
+	u_int BlockSize_byte = BLOCK_SIZE;
 	int FileEndBlock = Ino->filesize / BlockSize_byte;
 	if(Ino->filesize % BlockSize_byte ==0)
 		FileEndBlock--;
@@ -145,7 +145,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// length to be written in bytes
 	
 	int status = 0;
-	int BlockSize_byte = BLOCK_SIZE;
+	u_int BlockSize_byte = BLOCK_SIZE;
 
 	// next define where start to write, if offset out of range
 	// write at the last block of the file
