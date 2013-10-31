@@ -18,7 +18,7 @@
 #include <fuse.h>
 
 //more need from tianyu
-#define ROOT_INUM 1
+#define ROOT_INUM 0
 #define UNDEFINE_FILE -2
 
 extern Inode *ifile; //ifile stores an array of inodes
@@ -32,9 +32,13 @@ typedef struct DirEntry
 
 int Dir_Layer_Init(char *filename, u_int cachesize); //cache and checkPointPeriod save for Phase 2
 
+int Dir_GetAttr(const char *path, struct stat *stbuf);
+
 int Dir_mkdir(const char *dirName, mode_t mode, uid_t, gid_t gid);
 
 int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+
+int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi);
 
 int Dir_Open_File(const char *path, struct fuse_file_info *fi);
 
@@ -65,6 +69,8 @@ int Get_Inode_From_Inum(int inum, Inode **returnNode);
 int Validate_Inum(int inum, char *path);
 
 int Expand_Ifile(int n);
+
+int GetAttr(Inode *myNode, struct stat *stbuf);
 
 DirEntry *Get_Dir(Inode *dirNode, int *numfiles);
 

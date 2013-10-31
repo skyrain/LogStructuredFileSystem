@@ -22,17 +22,10 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 {
 	int status = 0;
 
-    inode_ifile = (Inode *)calloc(1, sizeof(Inode));
+  	//inode_ifile = (Inode *)calloc(1, sizeof(Inode));
     // Init the File layer as well
 	// int normalclose; save for the checkpoint roll forward---???--
-    status = 0;//File_Layer_Init(filename, inode_ifile, cachesize);
-	
-	if(status)
-	{
-		printf("Fail to Init.\n");
-		return status;
-	}
-
+    	status = 0;//File_Layer_Init(filename, inode_ifile, cachesize);
 	printf("Dir Layer is Initing.\n");
 	
 	// Init the ifile by calling File_read, and return the ifile to
@@ -79,6 +72,21 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 
 	return status;
 }
+
+int Dir_GetAttr(const char *path, struct stat *stbuf)
+{
+	int status;
+	Inode *myNode;
+
+	status = Get_Inode(path, &myNode);
+	if(status) {printf("Fail to getattr in get inode\n"); return status;}
+	myNode->mode = S_IFDIR | 0755; 
+	if(myNode->mode == 0){ printf("Invalid mode in get attr\n"); return -ENOENT;}
+
+	status = GetAttr(myNode, stbuf);
+	if(status) {printf("cannot get Getattr \n"); return status;}
+}
+
 //mkdir, make a directory
 int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 {
@@ -93,7 +101,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	
 	//Make sure the mode show that this is a direcoty
 	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
-
+	// this is for the directory other than Root
 	DirEntry currentDir[2];
     //???
 	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
@@ -106,8 +114,8 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	
 	Get_Inode(dir_name, &dirNode);
    
-    //?????????? 
-    dirNode->ino = 0;
+    // ?????????? 
+    // dirNode->ino = 0;
 	
     // ADd . and .. to this directory
 	strcpy(currentDir[1].filename, "..");
@@ -136,7 +144,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	
 	// flush the content to the file, 
 	// Write the inode for the new file to the ifile
-	status = Flush_Ino(dirNode->ino);
+	//status = Flush_Ino(dirNode->ino);
 
 	return status;
 }
@@ -191,7 +199,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	}
 
 	// Write the inode for the new file to the disk ---???---
-	status = Flush_Ino( inum );
+	//status = Flush_Ino( inum );
 	if( status )
 	{
 		printf("ERROR when flush the inum:\n");
@@ -213,7 +221,7 @@ int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
 
 	status = Validate_Inum(fi->fh, (char *)path);
 	if( status ){
-		// Bad Inum, parse the path to get the inode
+		// Bad Inum, parse the path to get the inode, so myNode is the return Node
 		status = Get_Inode(path, &myNode);
 		if( status )
 		{
@@ -250,10 +258,66 @@ int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
 	return size;
 }
 
+int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
+        off_t offset, struct fuse_file_info *fi){
+	// Lists all the files in the directory specified by path
+
+	int status, i, numfiles;
+	Inode *dirNode;
+
+	if (ifile_length == 0){
+		return 0;
+	}
+
+	// First, read the directory file from disk
+	status = Validate_Inum(fi->fh, (char *) path);
+	if( status ){
+		// Bad Inum, parse the path to get the inode
+		status = Get_Inode(path, &dirNode);
+		if( status ) {printf("ERROR in DirReadDir GetInode\n"); return status;}
+	}else{
+		// Valid inum, get the inode
+		status = Get_Inode_From_Inum(fi->fh, &dirNode);
+		if( status ) {printf("ERROR in DirReadDir GetIFromInum\n"); return status;}
+	}
+	DirEntry *dir  = Get_Dir(dirNode, &numfiles);
+
+	printf("Number of files in directory: %i\n", numfiles-2);
+
+	struct stat *stbuf;
+	stbuf = (struct stat *) malloc(sizeof(struct stat));
+	char name[FILE_NAME_LENGTH];
+
+	for(i = 0; i < numfiles; i++){
+		strcpy(name, dir[i].filename);
+
+		// fill information into stbuf
+		if (dir[i].inum != UNDEFINE_FILE){
+			// check to be sure this entry exists:  .. will not have a valid inum
+			status = GetAttr(&ifile[dir[i].inum], stbuf);
+			if( status )
+			{printf("ERROR in DirReadDir FillAttr\n"); return status;}
+		}else{
+			memset(stbuf, 0, sizeof(struct stat));
+		}
+
+		// let fuse put stbuf information into buf
+		printf("filename '%s', inum %i\n", name, dir[i].inum);
+		status = filler(buf, name, stbuf, offset);
+		if( status )
+		{printf("ERROR in DirReadDir Filler"); return status;}
+	}
+
+	time( &inode_ifile->access_Time );
+
+	return 0;
+}
+
+
 int Get_Inode(const char *path, Inode **returnNode){
 	// Get the inode for the path If the path is invalid, throw an error
 	// DirNode is inode ** so it to pass back an address of an inode
-	returnNode = (Inode **)calloc(1,sizeof(Inode *));
+	//returnNode = (Inode **)calloc(1,sizeof(Inode *));
 	int i;
 	char filename[FILE_NAME_LENGTH]; 
 	const char *subpath; 	// will point to the "part of the path" that has not yet been processed
@@ -280,7 +344,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 	// First, read the directory file from disk
 	//int inum = ROOT_INUM;
 	int numfiles;
-	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
+	Inode *dirNode;// = (Inode *)calloc(1,sizeof(Inode));
 	dirNode = &ifile[ROOT_INUM];
 	DirEntry *dir  = Get_Dir(dirNode, &numfiles);
 	if (dir == NULL){
@@ -661,4 +725,24 @@ int Expand_Ifile(int n){
 //	}
 
 	return 0;
+}
+
+// Set Inode attr into buffer 
+int GetAttr(Inode *myNode, struct stat *stbuf)
+{
+	memset(stbuf, '0', sizeof(struct stat));
+	
+	stbuf->st_mode = myNode->mode;
+	stbuf->st_size = myNode->filesize;
+	stbuf->st_gid = myNode->groupID;
+	stbuf->st_uid = myNode->userID;
+	stbuf->st_nlink = myNode->num_links;
+	stbuf->st_ino = myNode->ino;
+
+	stbuf->st_mtime = myNode->modify_Time;
+	stbuf->st_atime = myNode->access_Time;
+	stbuf->st_ctime = myNode->change_Time;
+
+	return 0;
+
 }

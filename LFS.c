@@ -67,13 +67,18 @@ extern u_int cache_seg_num;
 //-------------------------------------------------------------
 extern Inode * inode_ifile;
 
-
-
-
-
-
-
-
+extern int Dir_mkdir();
+extern void Dir_Layer_Destroy();
+extern int Dir_Layer_Init();
+extern int Dir_Open_File();
+extern int Dir_GetAttr();
+extern int Dir_Create_File();
+extern int Dir_Read_File();
+extern int Dir_Write_File();
+extern int Dir_Truncate_File();
+extern int Dir_Delete_File();
+extern int get_current_dir_name();
+extern int Dir_Read_Dir();
 
 // Initialize FS, return value will pass in the fuse_context to all
 // file operations.
@@ -96,6 +101,22 @@ void *LFS_Init(struct fuse_conn_info *conn)
     { printf("fail to init\n"); return status;}		
 
     return status;
+}
+
+int LFS_GetAttr(const char *path, struct stat *stbuf)
+{
+	printf("LFS is getting attributes \n");
+	int status = Dir_GetAttr(path, stbuf);
+	return status;
+}
+
+int LFS_ReadDir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi)
+{
+	printf("ReadDir \n");
+	int status;
+	status = Dir_Read_Dir(path, buf, fill, offset, fi);
+	if(status) {printf("read dir fail\n"); return status;}
+	return status;
 }
 
 int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
@@ -148,6 +169,8 @@ int LFS_Unlink(const char *path)
 
 static struct fuse_operations LFS_oper = {
     .init = LFS_Init,
+    .getattr = LFS_GetAttr,
+    .readdir = LFS_ReadDir,
     .create = LFS_Create,
     .open = LFS_Open,
     .opendir = LFS_OpenDir,
