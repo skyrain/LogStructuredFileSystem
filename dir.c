@@ -309,7 +309,7 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 	}
 
 	time( &inode_ifile->access_Time );
-
+	free(stbuf);
 	return 0;
 }
 
@@ -635,6 +635,7 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
                 return -ENOENT;   
         }
 
+	free(dirpath);
         return status;   
 }
 

@@ -231,14 +231,17 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	{ 	
 		// write the orginal file which file block number is AddrWrite.bk_no
 		// to the tail of the segment
-		Get_Block_pointer(Ino, writeBlock, &blockPointer);
 		//AddrWrite.seg_no = blockPointer.seg_no;
 		//AddrWrite.bk_no = blockPointer.bk_no;
+		
+		// File block number to be write, pass to the log write.
+		int fileBlockNumber = writeStartBlock + writeBlock;
+		//Get_Block_pointer(Ino, writeBlock, &blockPointer);
 		tailaddr = tail_log_addr;
+		Ino->direct_bk[fileBlockNumber].bk_no = tailaddr.bk_no;
+		Ino->direct_bk[fileBlockNumber].seg_no = tailaddr.seg_no;
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
-		status  = Log_Write(Ino->ino, writeBlock, BlockSize_byte, writePointer, tailaddr);
-		Ino->direct_bk[writeBlock].seg_no = tailaddr.seg_no;
-		Ino->direct_bk[writeBlock].bk_no = tailaddr.bk_no;
+		status  = Log_Write(Ino->ino, fileBlockNumber, BlockSize_byte, writePointer, tailaddr);
 		if(status)
 		{
 			printf("fail to write on the log, Log_Write\n");
@@ -290,6 +293,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	Ino->change_Time = t;
 
 	free(writeBuffer);
+	free(writePointer);
 
 	return status;
 
@@ -405,7 +409,8 @@ int File_Truncate(Inode *myNode, off_t offset)
         }
 
         myNode->filesize = offset;
-
+	
+	free(buffer);
         return status;
 
 }
@@ -440,15 +445,15 @@ void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 
 	if(BlockNumber < DIRECT_BK_NUM)
 	{ 
-		//memcpy(bp, Ino->direct_bk + BlockNumber, sizeof(Block_pointer));
+		memcpy(bp, Ino->direct_bk + BlockNumber, sizeof(Block_pointer));
         //Block_pointer * test;
         
-        Block_pointer* tbp = (Block_pointer *)calloc(1, sizeof(Block_pointer));
-        tbp->seg_no = tail_log_addr->seg_no;
-        tbp->bk_no = tail_log_addr->bk_no;
-        memcpy(bp, tbp, sizeof(Block_pointer));
-        free(tbp);
-   }
+        // Block_pointer* tbp = (Block_pointer *)calloc(1, sizeof(Block_pointer));
+        //tbp->seg_no = tail_log_addr->seg_no;
+        //tbp->bk_no = tail_log_addr->bk_no;
+        //memcpy(bp, tbp, sizeof(Block_pointer));
+        //free(tbp);
+   	}
 	else
 	{
 		printf("BlockNumber out of DIRECT_BK_NUM\n");
