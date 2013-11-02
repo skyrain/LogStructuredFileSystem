@@ -238,8 +238,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		int fileBlockNumber = writeStartBlock + writeBlock;
 		//Get_Block_pointer(Ino, writeBlock, &blockPointer);
 		tailaddr = tail_log_addr;
-		Ino->direct_bk[fileBlockNumber].bk_no = tailaddr.bk_no;
-		Ino->direct_bk[fileBlockNumber].seg_no = tailaddr.seg_no;
+		Ino->direct_bk[fileBlockNumber].seg_no = tailaddr->seg_no;
+		Ino->direct_bk[fileBlockNumber].bk_no = tailaddr->bk_no;
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
 		status  = Log_Write(Ino->ino, fileBlockNumber, BlockSize_byte, writePointer, tailaddr);
 		if(status)
@@ -410,7 +410,6 @@ int File_Truncate(Inode *myNode, off_t offset)
 
         myNode->filesize = offset;
 	
-	free(buffer);
         return status;
 
 }

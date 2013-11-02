@@ -125,7 +125,9 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 		currentDir[1].inum = UNDEFINE_FILE;
 	}
 	else
-	{
+	{      
+		// No problem here, because Get Dir Inode is 
+		// Getting the directory that contains the file/dir specified by path
 		status = Get_Dir_Inode(dir_name, &parentDirNode, parentDirNode->filename);
 		currentDir[1].inum = parentDirNode->ino;
 	}
@@ -149,6 +151,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	return status;
 }
 
+// When create a file or dir in the directory given by path.
 int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi){
 	// Assume this file does not exist already
 
@@ -220,7 +223,7 @@ int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
 	int status;
 
 	status = Validate_Inum(fi->fh, (char *)path);
-	if( status ){
+	if( status = 0 ){
 		// Bad Inum, parse the path to get the inode, so myNode is the return Node
 		status = Get_Inode(path, &myNode);
 		if( status )
@@ -343,6 +346,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 
 	// First, read the directory file from disk
 	//int inum = ROOT_INUM;
+	// ---???--- phase 2: search sub directory
 	int numfiles;
 	Inode *dirNode;// = (Inode *)calloc(1,sizeof(Inode));
 	dirNode = &ifile[ROOT_INUM];
@@ -412,7 +416,10 @@ int Get_Inode(const char *path, Inode **returnNode){
 			return -ENOENT;
 		}
 		// Update subpath to be break path + 1 (move past the '/')
-		subpath = &breakpath[1];
+		if(breakpath != NULL)
+		{
+			subpath = &breakpath[1];
+		}
 	}
 
 	// returnNode has been initiated.
@@ -423,6 +430,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 	return 0;
 }
 
+// write the corresponding ifile[inum] to inode_ifile or add to it
 int Flush_Ino(int inum)
 {
 	if(inum >= ifile_length)
