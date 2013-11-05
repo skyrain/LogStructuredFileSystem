@@ -24,6 +24,7 @@
 extern Inode *ifile; //ifile stores an array of inodes
 extern Inode *inode_ifile; // the inode of ifile;
 
+// Abstatct of Directory
 typedef struct DirEntry
 {
 	char filename[FILE_NAME_LENGTH];

@@ -18,6 +18,7 @@
 
 #define FREE_BLOCK_NUM -1
 #define READ_ERROR -2
+#define INDIRECT_BK_NUM -3
 // temp
 //#define 
 
@@ -30,11 +31,7 @@ int File_Init(Inode *Ino, int type)
 	time_t t;     
         time(&t);     
         Ino->filesize = 0;        
-        Ino->access_Time = t;  
-        Ino->change_Time = t;  
-        Ino->create_Time = t;  
-        Ino->modify_Time = t;  
- 	
+	
 	int i;	
 	//Init all direct blocks and indirect blocks.
         for(i = 0; i<DIRECT_BK_NUM; i++)
@@ -42,7 +39,12 @@ int File_Init(Inode *Ino, int type)
 		Ino->direct_bk[i].seg_no = FREE_BLOCK_NUM;
 		Ino->direct_bk[i].bk_no = FREE_BLOCK_NUM;
 	}
-	
+
+        Ino->access_Time = t;  
+        Ino->change_Time = t;  
+        Ino->create_Time = t;  
+        Ino->modify_Time = t;  
+ 
 	//some problem with the indirect and direct block structure
 	//Ino->indirect_bk.seg_no = FREE_BLOCK_NUM; phase 2
 	//Ino->indirect_bk.bk_no = FREE_BLOCK_NUM; phase 2

@@ -128,7 +128,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	{      
 		// No problem here, because Get Dir Inode is 
 		// Getting the directory that contains the file/dir specified by path
-		status = Get_Dir_Inode(dir_name, &parentDirNode, parentDirNode->filename);
+		status = Get_Dir_Inode(dir_name, &parentDirNode, currentDir[0]->filename);
 		currentDir[1].inum = parentDirNode->ino;
 	}
 
