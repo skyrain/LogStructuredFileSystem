@@ -90,14 +90,14 @@ void *LFS_Init(struct fuse_conn_info *conn)
 {
     int *status;
 
-	status = (int *)calloc(1, sizeof(int));
+    status = (int *)calloc(1, sizeof(int));
 
-	if(*status)
-	{ printf("fail to init\n"); return status;}
-    
-	// Init Directory
-	*status = Dir_Layer_Init(filename, cachesize);
-	if(*status)
+    if(*status)
+    { printf("fail to init\n"); return status;}
+
+    // Init Directory
+    *status = Dir_Layer_Init(filename, cachesize);
+    if(*status)
     { printf("fail to init\n"); return status;}		
 
     return status;
@@ -105,18 +105,18 @@ void *LFS_Init(struct fuse_conn_info *conn)
 
 int LFS_GetAttr(const char *path, struct stat *stbuf)
 {
-	printf("LFS is getting attributes \n");
-	int status = Dir_GetAttr(path, stbuf);
-	return status;
+    printf("LFS is getting attributes \n");
+    int status = Dir_GetAttr(path, stbuf);
+    return status;
 }
 
 int LFS_ReadDir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi)
 {
-	printf("ReadDir \n");
-	int status;
-	status = Dir_Read_Dir(path, buf, fill, offset, fi);
-	if(status) {printf("read dir fail\n"); return status;}
-	return status;
+    printf("ReadDir \n");
+    int status;
+    status = Dir_Read_Dir(path, buf, fill, offset, fi);
+    if(status) {printf("read dir fail\n"); return status;}
+    return status;
 }
 
 int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
@@ -157,14 +157,14 @@ int LFS_Mkdir(const char *dir_name, mode_t mode)
 
 int LFS_Truncate(const char *path, off_t offset)
 {
-        printf("LFS is truncating. \n");
-        return Dir_Truncate_File(path, offset);
+    printf("LFS is truncating. \n");
+    return Dir_Truncate_File(path, offset);
 }
 
 int LFS_Unlink(const char *path)
 {
-        printf("delete a file \n");
-        return Dir_Delete_File(path);
+    printf("delete a file \n");
+    return Dir_Delete_File(path);
 }
 
 static struct fuse_operations LFS_oper = {
@@ -184,14 +184,14 @@ static struct fuse_operations LFS_oper = {
 
 int main(int argc, char *argv[])
 {
-   
+
     int i;
     int status = 0;
     char **nargv = NULL;
-    
+
     //----------default 1 cache segment----------------
     cache_seg_num = 1;
-    
+
     int ch;
     while ((ch = getopt(argc, argv, "s:")) != -1)
     {
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
             case 's':
                 cache_seg_num = (u_int)atoi(optarg);
                 break;
-           case '?':
+            case '?':
                 break;
         }
     }
@@ -213,12 +213,13 @@ int main(int argc, char *argv[])
     fl_file = (char *)calloc(1, 8);
     strcpy(fl_file, filename);
 
+    /*    
     //print all the arguments
     for(i = 0; i < argc; i++)
     {
-        printf("%s\n", argv[i]);
+    printf("%s\n", argv[i]);
     }
-
+     */
     //---------1. -------filename:用于打开disk-------------------
 
     //----- ??(phase 2) get tail_log_addr--------------
@@ -239,32 +240,16 @@ int main(int argc, char *argv[])
     char store_seg_size[5];
     fgets(store_seg_size, 5, fp);
     seg_size = (u_int)atoi(store_seg_size);
-   
+
     char store_sec_num[5];
     fgets(store_sec_num, 5, fp);
- 
+
     //------------------if use fclose() 为毛有错 ????------------
     //---------暂时先不用----------------------------------------
     //  fclose(fp);
     sec_num = (u_int)atoi(store_sec_num); 
     free(config);
 
-/*    
-    //--- 2.  read super seg------------------------------- 
-    Flash_Flags flags = FLASH_SILENT;
-
-    //blocks : # of blocks in the flash
-    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
-    u_int * blocks = &tmp;
-    Flash   flash = Flash_Open(filename, flags, blocks);
-
-    //------read super seg into memory-------------------
-    void * super_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    Flash_Read(flash, 0, seg_size, super_seg_buffer); 
-
-    //----------for global variables in log.h-----------------------
-    Super_seg * super_seg = (Super_seg *)super_seg_buffer;
-*/
     seg_num = sec_num / seg_size;
     get_slog_to_memory();
 
@@ -279,38 +264,30 @@ int main(int argc, char *argv[])
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
     BLOCK_SIZE = bk_content_size;
-//    inode_ifile = (Inode *)(super_seg_buffer + sizeof(Super_seg) + (seg_num - 1) * sizeof(Seg_usage_table) + sizeof(Checkpoint));
 
     inode_ifile = super_seg->checkpoint->ifile;
 
-
-/*
-    void * sin_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    Flash_Read(flash, seg_size, seg_size, sin_buffer); 
-    seg_in_memory = (Seg *)sin_buffer;
-*/
-
     get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------
-   
-    
+
+
     //------------- create cache once the whole system ----------
     //---------- starts to run------------------------------------
     create_cache();
 
 #define NARGS 3
-        int nargc = 2 + NARGS;
-        nargv = (char **)malloc((nargc)*sizeof(char*));
+    int nargc = 2 + NARGS;
+    nargv = (char **)malloc((nargc)*sizeof(char*));
 
-        nargv[0] = argv[0];
+    nargv[0] = argv[0];
 
-        nargv[1] = "-f";
-        nargv[2] = "-s";
-        nargv[3] = "-d";
-        nargv[4] = argv[ argc - 1];
-        
-        status = fuse_main(nargc, nargv, &LFS_oper, NULL);
-        if(status){printf("fuse_main error\n"); return status;}
+    nargv[1] = "-f";
+    nargv[2] = "-s";
+    nargv[3] = "-d";
+    nargv[4] = argv[ argc - 1];
+
+    status = fuse_main(nargc, nargv, &LFS_oper, NULL);
+    if(status){printf("fuse_main error\n"); return status;}
 
     return 0;
 }

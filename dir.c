@@ -128,7 +128,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	{      
 		// No problem here, because Get Dir Inode is 
 		// Getting the directory that contains the file/dir specified by path
-		status = Get_Dir_Inode(dir_name, &parentDirNode, currentDir[0]->filename);
+		status = Get_Dir_Inode(dir_name, &parentDirNode, currentDir[0].filename);
 		currentDir[1].inum = parentDirNode->ino;
 	}
 
@@ -604,52 +604,52 @@ int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 }
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
-        // Gets the directory that contains the file/dir specified by path
-  	returnNode = (Inode **)calloc(1,sizeof(Inode *));
-        int status = 0;  
-        char *breakpath; // holds the location of the last '/' in the subpath                              
+    // Gets the directory that contains the file/dir specified by path
+    returnNode = (Inode **)calloc(1,sizeof(Inode *));
+    int status = 0;  
+    char *breakpath; // holds the location of the last '/' in the subpath                              
+    // find the last occurence of a /                                                                  
+    breakpath = strrchr( path,  '/');
+
+    if (breakpath == path){                                                                            
+        // This is root   
+        *returnNode = &ifile[ROOT_INUM];
+        if (strlen(&path[0])> FILE_NAME_LENGTH){
+            return -EBADF; // Error bad file descriptor
+        }        
+        strcpy(filename, &path[0]);                                                                
+    }else if (breakpath){             
+        // Not root, make _Get_Inode do its job                                                    
         char *dirpath;   
+        dirpath = (char *) malloc(breakpath - path + 1);
+        memset(dirpath, '\0', breakpath - path + 1); 
+        strncpy(dirpath, path, breakpath-path);
+        printf("path is '%s' and breakpath is '%s', and breakpath - path is %i\n",            
+                path, breakpath, breakpath - path);
+        printf("Getting inode for '%s'\n", dirpath);                                          
+        status = Get_Inode((const char *) dirpath, returnNode);
+        if( status )              
+        {        
+            printf("ERROR: .\n");                                  
+            return status;    
+        }        
+        if (strlen(&breakpath[1])> FILE_NAME_LENGTH){
+            return -EBADF; // Error bad file descriptor                                        
+        }        
+        strcpy(filename, &breakpath[1]);  
+        free(dirpath);
+    }else{           
+        // path contains no '/' and is thus invalid
+        return -ENOENT;   
+    }
 
-        // find the last occurence of a /                                                                  
-        breakpath = strrchr( path,  '/');
 
-        if (breakpath == path){                                                                            
-                // This is root   
-                *returnNode = &ifile[ROOT_INUM];
-                if (strlen(&path[0])> FILE_NAME_LENGTH){
-                        return -EBADF; // Error bad file descriptor
-                }        
-                strcpy(filename, &path[0]);                                                                
-        }else if (breakpath){             
-                // Not root, make _Get_Inode do its job                                                    
-                dirpath = (char *) malloc(breakpath - path + 1);
-                memset(dirpath, '\0', breakpath - path + 1); 
-                strncpy(dirpath, path, breakpath-path);
-                printf("path is '%s' and breakpath is '%s', and breakpath - path is %i\n",            
-                                path, breakpath, breakpath - path);
-                printf("Getting inode for '%s'\n", dirpath);                                          
-                status = Get_Inode((const char *) dirpath, returnNode);
-                if( status )              
-                {        
-                        printf("ERROR: .\n");                                  
-                        return status;    
-                }        
-                if (strlen(&breakpath[1])> FILE_NAME_LENGTH){
-                        return -EBADF; // Error bad file descriptor                                        
-                }        
-                strcpy(filename, &breakpath[1]);  
-        }else{           
-                // path contains no '/' and is thus invalid
-                return -ENOENT;   
-        }
-
-	free(dirpath);
-        return status;   
+    return status;   
 }
 
 DirEntry *Get_Dir(Inode *dirNode, int *numfiles){
-	// Return the directory file for the given directory inode
-	int status;
+    // Return the directory file for the given directory inode
+    int status;
 
 	DirEntry *dir;
 	dir = (DirEntry *) malloc(dirNode->filesize);
