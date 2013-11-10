@@ -22,6 +22,8 @@
 #include "flash.h"
 #include "File.h"
 
+//**************************??注意 只用部分全局变量*******************
+
 //----------------gloabal value-----------------------
 extern Super_seg * super_seg;
 extern Disk_cache * disk_cache;
@@ -64,8 +66,12 @@ extern u_int bk_content_size;
 //------chosen by user----------------
 extern u_int cache_seg_num;
 
+//**************************************************************
+
+
 //-------------------------------------------------------------
 extern Inode * inode_ifile;
+
 
 extern int Dir_mkdir();
 extern void Dir_Layer_Destroy();

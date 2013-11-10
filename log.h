@@ -91,7 +91,7 @@ typedef struct LogAddress
 typedef struct Seg_usage_table
 {
     int seg_no;
-
+    bool is_checkpoint;
     //--------- bks that used now in the seg-------
     int num_live_bk;
     //u_int num_live_bytes; // should not be num of live blocks???
@@ -121,12 +121,12 @@ typedef struct Inode
     //    u_int bk_no_in_log;//this inode is stored in which block of log
     int filetype;
     int filesize;
-    char filename[FILE_NAME_LENGTH + 1]; //phase 1
+//    char filename[FILE_NAME_LENGTH + 1]; //phase 1
 
     //flash address of the inode's blocks
     Block_pointer direct_bk[DIRECT_BK_NUM];
     //Bk_list indirect_bk;
-    //Block_pointer indirect_bk;  phase 2
+    Block_pointer indirect_bk;
 
     mode_t mode;
     uid_t userID;
@@ -149,12 +149,17 @@ typedef struct Inode
 typedef struct Checkpoint
 {
     Inode * ifile;
-    Seg_usage_table *seg_usage_table;
+    Seg_usage_table * seg_usage_table;
     time_t curr_time;
     LogAddress * last_log_addr;
 }Checkpoint;
 
 
+typedef struct LogAddrList
+{
+    LogAddress log_addr;
+    struct LogAddrList * next;
+}
 
 
 //super log segment 存整个log的信息和checkpoint等
@@ -166,15 +171,20 @@ typedef struct Super_seg
     u_int bk_size;
     u_int wearlimit;
     u_int sec_num;
-    //----只记录除 super seg 外的data seg的利用率    
-    Seg_usage_table * seg_usage_table;
+    u_int checkpoint_size;// in bk
+    u_int begin_bk_size;//in bk
+    //--points to the log addr of checkpoint-------
+//    LogAddress cp_addr;
+    LogAddrList * cp_addr;
+
     /* 
      * edited 1 weng 
      * checkpoint
      * Flash
      */
-    //??checkpoint还没定义
-    Checkpoint * checkpoint;
+    //checkpoint 可移动,不写在super seg里面
+    //若disk block的file_no = CP_BK 说明该disk block存的是checkpoint
+//    Checkpoint * checkpoint;
 
 }Super_seg;
 
@@ -195,6 +205,7 @@ typedef struct Disk_cache
 
 //----------------gloabal value-----------------------
 Super_seg * super_seg;
+Checkpoint * checkpoint;
 Disk_cache * disk_cache;
 
 //-------points to the logAddress that could start to write data-------
@@ -220,6 +231,7 @@ u_int bk_size;
 //---------chose by user-------------------
 u_int bks_per_seg;
 
+//-----------seg_size 必须为 FLASH_SECTORS_PER_BLOCK 的整数倍----
 u_int seg_size;
 
 //??注意应写程序保证若用户输入导致计算出的seg_num非整数则让用户重新输
@@ -272,6 +284,8 @@ void copy_log_to_memory(int seg_no, void * copy_seg);
 void get_log_to_memory(LogAddress * log_addr);
 
 void get_slog_to_memory();
+
+void get_checkpoint_to_memory();
 //-----------------------------------------------------------
 //input: disk 地址，返回长度为length的dis数据于buffer中
 int Log_Read(LogAddress * log_addr, u_int length, void * buffer);
