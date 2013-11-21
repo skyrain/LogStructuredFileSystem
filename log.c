@@ -180,7 +180,6 @@ u_int find_free_seg(u_int start_seg_no)
     }
 }
 
-
 //----find the initial log_addr----------------
 //--- to store checkpoint----------------------
 //---note: start finding since seg which is next--
@@ -209,8 +208,13 @@ void get_cp_loc()
     }
 }
 
-//--- 2 checkpoints--------?? 
-//-----------????????????????????????????????------------
+//------to be done later ??--------------------
+//--- store the last 2 checkpoints, update by on another-----------
+//---when read checkpoint, check the checksum, use the most recent-
+//--checkpoint that have the correct checksum----------------------
+//------ --------------------------------------
+
+
 //------checkpoint addr is in super seg------------------
 //-------find continuous bks of checkpoint_size, --------
 //-----use this continuous space store checkpoint-------
@@ -218,51 +222,34 @@ void store_checkpoint()
 {
     get_slog_to_memory();
     u_int checkpoint_size = super_seg->checkpoint_size;
-
     u_int remain_cp_size = checkpoint_size; // in bk
-
     u_int wear_bk_size = FLASH_SECTORS_PER_BLOCK;
 
     //----找到可以存cp的开端seg---------------    
-    //----------把cp数据存在buffer里，然后按seg 分割存如每个seg---
+    //----------把cp数据存在buffer里，然后按seg 分割存入每个seg---
     //--存checkpoint的 seg 的对应seg_usage_table的is_checkpoint属性为true-
     //---拿整数个seg存checkpoint--------------
-    //---标记是存checkpoint的seg不参与cleaning的过程
-
-
-
-
-
-
-
-
+    //---标记那些存checkpoint的seg不参与cleaning的过程
 
     while(remain_cp_size > 0)
     {
-        //---------------for checkpoint in super seg-------------
-        void * cp_buffer;
-        if(remain_cp_size > bks_per_seg)
-            cp_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        else
-            cp_buffer = calloc(1, remain_cp_size * bk_size * FLASH_SECTOR_SIZE);
-
+        void * cp_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
 
         Checkpoint * cp = (Checkpoint *)calloc(1, sizeof(Checkpoint));
         cp->ifile = cp_buffer + bytes_offset + sizeof(Inode *) 
             + sizeof(Seg_usage_table *) + sizeof(time_t) + sizeof (LogAddress *);
-        cp->seg_usage_table = s_seg_buffer + bytes_offset + sizeof(Inode *)
+        cp->seg_usage_table = cp_buffer + bytes_offset + sizeof(Inode *)
             + sizeof(Seg_usage_table *) + sizeof(time_t) + sizeof(LogAddress *)
             + sizeof(Inode);
         cp->curr_time = 0;
-        cp->last_log_addr = s_seg_buffer + bytes_offset + sizeof(Inode *)
-            + sizeof(Seg_usage_table *) + sizeof(time_t) + + sizeof(LogAddress *)
-            + sizeof(Inode) + sizeof(Seg_usage_table) * (seg_num -1);
+        cp->last_log_addr = cp_buffer + bytes_offset + sizeof(Inode *)
+            + sizeof(Seg_usage_table *) + sizeof(time_t) + + sizeof(LogAddress *) + sizeof(Inode) + sizeof(Seg_usage_table) * (seg_num -1);
 
-        memcpy(s_seg_buffer + bytes_offset, cp, sizeof(Checkpoint));
+        memcpy(cp_buffer + bytes_offset, cp, sizeof(Checkpoint));
         bytes_offset += sizeof(Checkpoint);
         free(cp);
-
+//---?????---------
         //----------for ifile in checkpoint---------------------
         Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
         tmp_inode->ino = -1;
@@ -324,24 +311,6 @@ void store_checkpoint()
     
         remain_cp_size = remain_cp_size - bks_per_seg;
     }
-
-/*
-    //--------change tail_log_addr-----------------------
-    tail_log_addr->seg_no = 1;
-    while(tail_log_addr->seg_no * bks_per_seg < checkpoint_size)
-        tail_log_addr->seg_no++;
-
-    if(checkpoint_size % bks_per_seg == 0)
-    {
-        tail_log_addr->seg_no ++;
-        tail_log_addr->bk_no = 1;
-    }
-    else
-    {
-        tail_log_addr->bk_no = checkpoint_size - (bks_per_seg - 1) * (tail_log_addr->seg_no - 1)
-            + 1;
-    }
-*/
 }
 
 
@@ -887,7 +856,6 @@ void get_log_to_memory(LogAddress * log_addr)
 
 }
 
-//----?? 要改----------
 void get_slog_to_memory()
 {
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
@@ -902,7 +870,19 @@ void get_slog_to_memory()
     //--------reconstruct the segment to memory from disk-------------    
     u_int bytes_offset = 0;
     super_seg = (Super_seg *)buffer;
+
+    //--for cp_addr in super_seg--------------------------------------
     bytes_offset += sizeof(Super_seg);
+    LogAddrList * la_walker = (LogAddrList *)calloc(1, sizeof(LogAddrList));
+    super->cp_addr = la_walker;
+    while(la_walker != NULL)
+    {
+        LogAddrList * la = (LogAddrList *)(buffer + bytes_offset);
+        bytes_offset += sizeof(LogAddrList);
+        memcpy(la_walker, la, sizeof(LogAddrList));
+        la_walker = la_walker->next;
+    }
+/*    
     super_seg->seg_usage_table = (Seg_usage_table *)calloc(1, sizeof(Seg_usage_table)); 
 
     //-------for seg usage table---------------
@@ -955,6 +935,7 @@ void get_slog_to_memory()
     super_seg->checkpoint->last_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     memcpy(super_seg->checkpoint->last_log_addr, buffer + bytes_offset,
             sizeof(LogAddress)); 
+*/
 
 }
 
