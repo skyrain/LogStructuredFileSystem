@@ -171,7 +171,7 @@ typedef struct Super_seg
     u_int bk_size;
     u_int wearlimit;
     u_int sec_num;
-    u_int checkpoint_size;// in bk
+    u_int checkpoint_size;// in bk, whole number of bks_per_seg
     u_int begin_bk_size;//in bk
     //--points to the log addr of checkpoint-------
 //    LogAddress cp_addr;
