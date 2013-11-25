@@ -845,8 +845,45 @@ void get_slog_to_memory()
     }
 }
 
-//--?? add find the next bk < wearlimit and available-----
+//--- given log addr, check whether this addr is the last addr---
+//-- within that seg that is <= wearlimit and empty--------------
+bool is_remain_seg_not_usable(LogAddress * log_addr)
+{
+    bool returnValue = true;
+    
+    int i = log_addr->bk_no;
+    if (i == bks_per_seg - 1)
+    {
+        ;
+    }
+    else
+    {
+        i++;
+        LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
+        for(; i < bks_per_seg; i++)
+        {
+            tmp_addr->seg_no = log_addr->seg_no;
+            tmp_addr->bk_no = i;
+            if(is_in_wearlimit(tmp_addr))
+            {
+                returnValue = false;
+                break;
+            }
+        }
+    }
 
+    return returnValue;
+}
+
+
+//--- according to now tail_log_addr, locate the new tail_log_addr-----
+//---note: need to check the seg_usage_table's is_checkpoint property--
+//--??------
+void locate_tail_log_addr()
+{
+}
+
+//--------  find the next bk < wearlimit and available--------
 //-------------assist func for log write-------------------------
 //-----------set & grab a new log seg if necessary-----------
 //--------call this func after write data to log----------------
