@@ -354,40 +354,44 @@ int Log_Create()
     get_slog_to_memory(); 
     //----1. initialize super_seg->cp_addr list-------------
     u_int cp_addr_num = checkpoint_size / bks_per_seg;   
-//---??----
     LogAddrList * cp_log_addr_walker = super_seg->cp_addr;
-    u_int start_seg_no = tail_log_addr->seg_no;
-    while(cp_log_addr_walker != NULL)
+    u_int free_seg_no = 1;
+    while(cp_addr_num > 0)
     {
-        u_int free_seg_no = find_free_seg(start_seg_no);
         cp_log_addr_walker->log_addr.seg_no = free_seg_no;
         cp_log_addr_walker->log_addr.bk_no = 1;
 
-        start_seg_no = free_seg_no;
-        cp_log_addr_walker = cp_log_addr_walker->next;
+        if(cp_addr_num != 1)
+        {
+            LogAddrList * tmp_cp_log_addr = (LogAddrList *)calloc(1, sizeof(LogAddrList));
+            cp_log_addr_walker->next = tmp_cp_log_addr;
+            cp_log_addr_walker = cp_log_addr_walker->next;
+        }
+        else
+            cp_log_addr_walker->next = NULL;
+
+        free_seg_no ++;
+        cp_addr_num--;
     }
     //--  2. flag segment storing checkpoint-----
-
     store_checkpoint();
 
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
-    tail_log_addr->seg_no = ??;
+    tail_log_addr->seg_no = free_seg_no;
     tail_log_addr->bk_no = 1;
-    //----------------------------------------------------------------
+ 
     //------------create normal seg-----------------------------------
-    //---------------------------------------------------------------
+    //----------------  ?? -------------------------------------------
+    //----------假设 begin bk 的空间 <= 1 bk ------------------------
+    //--- 所以在mklfs.c 文件中设置bks_per_seg不能太大---------------
     for(i = 1; i < seg_num; i++)
     {
         void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
-        
         Seg * ts = (Seg *)calloc(1, sizeof(Seg));
         ts->begin_bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *);
- //       ts->bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *) 
-//            + sizeof(Begin_bk); 
-        memcpy(n_seg_buffer, ts, sizeof(Seg));
+        memcpy(n_seg_buffer + bytes_offset, ts, sizeof(Seg));
         bytes_offset += sizeof(Seg);
-
         free(ts);
 
         //--------begin bk----------------------------------
@@ -395,10 +399,11 @@ int Log_Create()
         bb->seg_no = i;
         bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(int)
             + sizeof(Seg_sum_bk *);
-        memcpy(n_seg_buffer, bb, sizeof(Begin_bk));
+        memcpy(n_seg_buffer + bytes_offset, bb, sizeof(Begin_bk));
         bytes_offset += sizeof(Begin_bk);
         free(bb);
         
+        //----seg sum bk of begin bk----------------------------
         Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
         ssb->bk_no = 0;
         ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(int)
@@ -406,7 +411,8 @@ int Log_Create()
         memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
         bytes_offset += sizeof(Seg_sum_bk);
         free(ssb);
-        
+       
+        //---- seg sum entry of seg sum bk---------------------- 
         int j;
         for(j = 1; j < bks_per_seg; j++)
         {
@@ -433,7 +439,7 @@ int Log_Create()
         } 
 */
         Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
-        free(n_seg_buffer);   
+        free(n_seg_buffer); 
     }
 
     Flash_Close(flash);
@@ -490,13 +496,11 @@ u_int length_in_bk(u_int len)
     return bks_count;
 }
 
-
-
 //-----------------read_cache----------------------------------
 //------- input: buffer only need to be a pointer
 //--------- now file layer only give me length = 1 block data in bytes--------
 //---------for file layer simplicity--------------------------------------
-//-------- now this func can deal with length could be > 1 block data in bytes------------
+//--- now this func can deal with length could be > 1 block data in bytes------
 bool read_cache(LogAddress * log_addr, u_int length, void * buffer)
 {
     buffer = calloc(1, length);
@@ -566,7 +570,7 @@ u_int length_in_seg(u_int bks_tobe_read)
     return segs_count;
 }
 
-//input: log_addr 地址，返回长度为length的dis数据于buffer中
+//input: log_addr 地址，返回长度为length的disk数据于buffer中
 //-------Here now: length is always = bk_size (in bytes)----------
 //-------from file layer-----------------------------------------
 //----but this func is able to read > 1 bk_size data--------------
@@ -582,28 +586,22 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
     //If not in cache, read data from disk, 
     //then store it on cache from the 1st cache seg
-    //------------1. read data from flash-----------
+    //----------1. read data from flash-----------
     buffer = calloc(1, length);
 
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
-    
     u_int tmp = bks_per_seg * super_seg->seg_num;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
    
     u_int sec_offset = log_addr->seg_no * seg_size;
-    
     u_int bks_remain = bks_per_seg - log_addr->bk_no;
-
     u_int bks_tobe_read = length_in_bk(length);
-    
     u_int buffer_offset = 0;
-
+    
     bool read_done = false;
-   
     u_int segs_tobe_read = length_in_seg(bks_tobe_read); 
-
     u_int segs_read[segs_tobe_read];
     
     int i;
@@ -651,7 +649,6 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
     Flash_Close(flash);
 
-
     //----------2. store on cache-----------------
     //-------------2.1 check whether all are just updated----
     //---if all yes, set each's IS_JUST_UPDATE = false;
@@ -688,7 +685,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
             if(!c_walker->IS_JUST_UPDATE)
             {
 
-/*                
+                /*                
                 //??need calloc before use buffer to this func? 
                 void * new_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
                 //choose the model of Flash
@@ -698,7 +695,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
                 flash = Flash_Open(fl_file, flags, blocks); 
                 Flash_Read(flash, segs_read[i] * seg_size, seg_size, new_buffer);
                 Flash_Close(flash);
-*/              
+                 */              
                 void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
                 copy_log_to_memory(segs_read[i], tbuffer);
 
@@ -712,8 +709,6 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
         }
 
     }
-
-
 
     return 0;
 
@@ -733,7 +728,7 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
 
     Flash_Close(flash);
 
-    //--------reconstruct the segment to memory from disk-------------    
+    //--------reconstruct the normal segment to memory from disk----------    
     u_int bytes_offset = 0;
     Seg* tseg = (Seg *)buffer;
     tseg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
@@ -771,7 +766,8 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
 
 
 //----------grab one seg from flash memory into memory-------
-//---------- to be written data---------------------------
+//---------- to be written data----------------------------
+//-- serve for log write func-------------------------------
 void get_log_to_memory(LogAddress * log_addr)
 {
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
@@ -849,11 +845,9 @@ void get_slog_to_memory()
     }
 }
 
+//--?? add find the next bk < wearlimit and available-----
 
-
-//-------------assist func--------------------------------------
-
-
+//-------------assist func for log write-------------------------
 //-----------set & grab a new log seg if necessary-----------
 //--------call this func after write data to log----------------
 void setLogTail()
@@ -883,8 +877,8 @@ void setLogTail()
     }
 }
 
-
-
+//---??add check if for the now using seg, the remaining bks are all
+// >= wearlimit or not, if yes push to disk and add the wearlimit
 
 //---------once tail_log_addr reaches certain log seg's end--------
 //-------- push that log seg data into disk------------------------
@@ -907,8 +901,6 @@ void pushToDisk(LogAddress * log_addr)
         Flash_Close(flash);
     }
 }
-
-
 
 //-------------------write data log's one block---------------
 //------ now   always   write 1 block size in bytes---------------
@@ -954,7 +946,8 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
 
 
 //-----------------------------------------------------------------
-//将文件的inum(inode)的第block号块写入log, 写入log的地址为tail_log_addr,写入内i容
+//---------将文件的inum(inode)的第block号块写入log,----------------
+//------- 写入log的地址为tail_log_addr ---------------------------
 //----------------------input--------------------------------------
 //--------input: length - always = fl_bk_size;
 //-----------!!! 一次只写一个 block的数据--------------------------
@@ -999,6 +992,8 @@ int Log_Free(LogAddress * log_addr, u_int length)
     return 0;
 }
 
+//-----此func目前未被调用过---------------------------------
+//---------------------------------------------------------
 int Log_Init(char * filename, Inode * iifile, u_int cachesize)
 {
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);

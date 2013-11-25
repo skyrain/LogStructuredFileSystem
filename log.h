@@ -64,7 +64,6 @@ typedef struct Begin_bk
     //----------in begin bk---------------------
     int seg_no;
 
-    //Note: Seg_sum_bk starts at the 2nd bk of seg
     Seg_sum_bk  * ssum_bk; 
 
 }Begin_bk;
