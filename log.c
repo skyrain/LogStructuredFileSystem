@@ -141,7 +141,7 @@ void get_checkpoint_to_memory()
             sut->next = buffer + bytes_offset;
         else
             sut->next = NULL;
-
+        
         memcpy(sut_walker, sut, sizeof(Seg_usage_table));
         sut_walker = sut_walker->next;
     }
@@ -233,10 +233,33 @@ void store_checkpoint()
    
     //---1. store current checkpoint info into buffer-------- 
     void * buffer = calloc(1, checkpoint_size * bk_size * FLASH_SECTOR_SIZE);
+    u_int bytes_offset = 0; 
+    //--- for checkpoint structure-------------------------
+    memcpy(buffer + bytes_offset, checkpoint, sizeof(Checkpoint));
+    bytes_offset += sizeof(Checkpoint);
+    //---- for ifile of checkpoint--------------------------
+    memcpy(buffer + bytes_offset, checkpoint->ifile, sizeof(Inode));
+    bytes_offset += sizeof(Inode);
+    //---- for seg_usage_table of checkpoint----------------
+    int i;
+    for(i = 1; i < seg_num; i++)
+    {
+        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+        int j = i;
+        while(j > 1)
+        {
+            sut_walker = sut_walker->next;
+            j--;
+        }
+        memcpy(buffer + bytes_offset, sut_walker, sizeof(Seg_usage_table));
+        bytes_offset += sizeof(Seg_usage_table);
+    }
     
-    //--??可能出错，此处检查sizeof(checkpoint)的值---------------
-    memcpy(buffer, checkpoint, sizeof(checkpoint));
-
+    //---for curr_time of checkpoint------------
+    memcpy(buffer + bytes_offset, checkpoint->curr_time, sizeof(time_t));
+    bytes_offset += sizeof(time_t);
+    //---- for last_log_addr--------------------
+    memcpy(buffer + bytes_offset, checkpoint->last_log_addr, sizeof(LogAddress));    
     //---2. store the buffer into right cp location----------
     Flash_Flags flags = FLASH_SILENT;
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
@@ -374,12 +397,63 @@ int Log_Create()
         cp_addr_num--;
     }
     //--  2. flag segment storing checkpoint-----
-    store_checkpoint();
+    get_checkpoint_to_memory();
+    //--- initialize checkpoint properties---------
+    //----------for ifile in checkpoint---------------------
+    Inode * tmp_inode = (Inode *)calloc(1, sizeof(Inode));
+    tmp_inode->ino = -1;
+    tmp_inode->filetype = 0;
+    tmp_inode->filesize = 0;
+    tmp_inode->filename[0] = 'i';
+    tmp_inode->filename[1] = 'f';
+    tmp_inode->filename[2] = 'i';
+    tmp_inode->filename[3] = 'l';
+    tmp_inode->filename[4] = 'e';
+    //----??-------------------------------------
+    for(i = 0; i < DIRECT_BK_NUM; i++)
+    {
+        //-----?? seg_no 初始化为 0-------------
+        tmp_inode->direct_bk[i].seg_no = 0;
+        tmp_inode->direct_bk[i].bk_no = i;
+    }
+    tmp_inode->indirect_bk.seg_no = 0;
+    tmp_inode->indirect_bk.bk_no = i;
+    //-----??-----------------------------------
+    tmp_inode->mode = 0;
+    tmp_inode->userID = getuid();
+    tmp_inode->groupID = getgid();
+    time_t t;
+    time(&t);
+    tmp_inode->modify_Time = t;
+    tmp_inode->access_Time = t;
+    tmp_inode->create_Time = t;
+    tmp_inode->change_Time = t;
+    tmp_inode->num_links = 0;
+    
+    memcpy(checkpoint->ifile, tmp_inode, sizeof(Inode));
+    free(tmp_inode);
 
+    //-------for seg_usage_table in checkpoint-----------
+    Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+    for(i = 1; i < seg_num; i++)
+    {
+        sut_walker->seg_no = i;
+        sut_walker->is_checkpoint = false;
+        sut_walker->num_live_bk = 0;
+        sut_walker->modify_time = -1;
+        sut_walker = sut_walker->next; 
+    }
+    
+    //---- initialize the tail_log_addr--------------------
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     tail_log_addr->seg_no = free_seg_no;
     tail_log_addr->bk_no = 1;
  
+    //-------for last_log_addr in checkpoint--------------
+    memcpy(checkpoint->last_log_addr, tail_log_addr, sizeof(LogAddress));
+
+    store_checkpoint();
+
     //------------create normal seg-----------------------------------
     //----------------  ?? -------------------------------------------
     //----------假设 begin bk 的空间 <= 1 bk ------------------------
@@ -876,12 +950,73 @@ bool is_remain_seg_not_usable(LogAddress * log_addr)
 }
 
 
-//--- according to now tail_log_addr, locate the new tail_log_addr-----
-//---note: need to check the seg_usage_table's is_checkpoint property--
-//--??------
-void locate_tail_log_addr()
+//--- check the seg_usage_table's is_checkpoint property--
+bool is_cp_seg(LogAddress * log_addr)
 {
+    Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+    
+    int seg_no = log_addr->seg_no;
+    int i = 1;
+    while(i < seg_no)
+    {
+        sut_walker = sut_walker->next;
+        i++;
+    } 
+    
+    return sut_walker->is_checkpoint; 
 }
+
+
+//-------prerequisite: know the log_addr->seg_no has good bk to be used-----
+//--- find available bk includes log_addr->bk itself-----------------------
+void locate_tail_log_addr_bk(LogAddress * log_addr)
+{
+    LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
+    int i = log_addr->bk_no;
+    for(; i < bks_per_seg; i++)
+    {
+           tmp_addr->seg_no = log_addr->seg_no;
+           tmp_addr->bk_no = i;
+           if(is_in_wearlimit(tmp_addr))
+           {
+               tail_log_addr->seg_no = log_addr->seg_no;
+               tail_log_addr->bk_no = i;
+               return;
+           }
+    }
+}
+
+
+//--------locate tail_log_addr from first normal segment----------------
+void locate_tail_log_addr_from_begin()
+{
+    int i;
+    for(i = 1; i < seg_num; i++)
+    {
+        //--- check seg_usage_table's is_checkpoint ----
+        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+        int j = i;
+        while(j > 1)
+        {
+            sut_walker = sut_walker->next;
+            j--;
+        }
+
+        //---- if the seg is not seg storing cp---------
+        if(sut_walker->is_checkpoint == false)
+        {
+            tmp_addr->seg_no = i;
+            tmp_addr->bk_no = 1;
+            //---- if this seg has available bk to store data---
+            if(!is_remain_seg_not_usable(tmp_addr))
+            {
+                locate_tail_log_addr_bk(tmp_addr);
+                break;
+            } 
+        }
+    }
+}
+
 
 //--------  find the next bk < wearlimit and available--------
 //-------------assist func for log write-------------------------
@@ -889,29 +1024,36 @@ void locate_tail_log_addr()
 //--------call this func after write data to log----------------
 void setLogTail()
 {
+    LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     //If come to end of certain log seg
-    if(tail_log_addr->bk_no == bks_per_seg -1)
+    if(is_remain_seg_not_usable(tail_log_addr))
     {
         //If come to every end of log structure
         if(tail_log_addr->seg_no == seg_num - 1)
         {
-            tail_log_addr->seg_no = 1;
-            tail_log_addr->bk_no = 1;
+            locate_tail_log_addr_from_begin();
         }
-        //else turn to next log seg's 1th bk
+        //else turn to check next log seg's 1th bk
         else
         {
-            tail_log_addr->seg_no += 1;
-            tail_log_addr->bk_no = 1;
+           bool can_find_in_back = true;
+           tmp_addr->seg_no = tail_log_addr->seg_no + 1;
+           tmp_addr->bk_no = 1;
+           //-------------------------??-----------
+           for()
         }
 
         get_log_to_memory(tail_log_addr);
     }
-    //just add 1 of bk_no
+    //find usable bk within that seg
     else
     {
-        tail_log_addr->bk_no += 1;
+        tmp_addr->seg_no = tail_log_addr->seg_no;
+        tmp_addr->bk_no = tail_log_addr->bk_no + 1;
+        locate_tail_log_addr_bk(tmp_addr);
     }
+
+    free(tmp_addr);
 }
 
 //---??add check if for the now using seg, the remaining bks are all
