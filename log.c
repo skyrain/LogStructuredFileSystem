@@ -218,6 +218,7 @@ void get_cp_loc()
 //------checkpoint addr is in super seg------------------
 //-------find continuous bks of checkpoint_size, --------
 //-----use this continuous space store checkpoint-------
+//--- do not need to update seg usage table storing cp---
 void store_checkpoint()
 {
     //----找到存cp的segs---------------
@@ -950,23 +951,6 @@ bool is_remain_seg_not_usable(LogAddress * log_addr)
 }
 
 
-//--- check the seg_usage_table's is_checkpoint property--
-bool is_cp_seg(LogAddress * log_addr)
-{
-    Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
-    
-    int seg_no = log_addr->seg_no;
-    int i = 1;
-    while(i < seg_no)
-    {
-        sut_walker = sut_walker->next;
-        i++;
-    } 
-    
-    return sut_walker->is_checkpoint; 
-}
-
-
 //-------prerequisite: know the log_addr->seg_no has good bk to be used-----
 //--- find available bk includes log_addr->bk itself-----------------------
 void locate_tail_log_addr_bk(LogAddress * log_addr)
@@ -1036,11 +1020,21 @@ void setLogTail()
         //else turn to check next log seg's 1th bk
         else
         {
-           bool can_find_in_back = true;
+           bool can_find_in_back = false;
            tmp_addr->seg_no = tail_log_addr->seg_no + 1;
            tmp_addr->bk_no = 1;
-           //-------------------------??-----------
-           for()
+           while(tmp_addr->seg_no < seg_num)
+           {
+               if(!is_remain_seg_not_usable(tmp_addr))
+               {
+                   locate_tail_log_addr_bk(tmp_addr);
+                   can_find_in_back = true;
+               }
+               tmp_addr->seg_no++;
+           }
+
+           if(!can_find_in_back)
+               locate_tail_log_addr_from_begin();
         }
 
         get_log_to_memory(tail_log_addr);
@@ -1056,16 +1050,13 @@ void setLogTail()
     free(tmp_addr);
 }
 
-//---??add check if for the now using seg, the remaining bks are all
-// >= wearlimit or not, if yes push to disk and add the wearlimit
-
 //---------once tail_log_addr reaches certain log seg's end--------
 //-------- push that log seg data into disk------------------------
 //---------call this func before setLogTail()-------------------
 void pushToDisk(LogAddress * log_addr)
 {
     //If reaches certain log seg's end, write entire log seg to disk
-    if(log_addr->bk_no == bks_per_seg -1)
+    if(is_remain_seg_not_usable(log_addr))
     {
         //1.write to disk
         //choose the model of Flash
@@ -1077,6 +1068,23 @@ void pushToDisk(LogAddress * log_addr)
         Flash   flash = Flash_Open(fl_file, flags, blocks);
         Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
                 seg_size, seg_in_memory);
+
+        //----update the seg_usage_table--------------
+        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+        int i = log_addr->seg_no;
+        while(i > 1)
+        {
+            sut_walker = sut_walker->next;
+            i--;
+        }
+        time_t t;
+        time(&t);
+        sut_walker->modify_time = t;
+
+        //----------怎麽确定 num_live_bk ???----------------
+        //--- 感觉要结合 seg_sum_entry 的file bk和inode 得到真实的num_live_bk-
+        sut_walker->num_live_bk = bks_per_seg;
+
         Flash_Close(flash);
     }
 }
