@@ -410,16 +410,20 @@ int Log_Create()
     tmp_inode->filename[2] = 'i';
     tmp_inode->filename[3] = 'l';
     tmp_inode->filename[4] = 'e';
-    //----??-------------------------------------
+
+
+    //----??跟翁旭东check---------------------------------
     for(i = 0; i < DIRECT_BK_NUM; i++)
     {
-        //-----?? seg_no 初始化为 0-------------
-        tmp_inode->direct_bk[i].seg_no = 0;
+        //----- seg_no 初始化为 free_seg_no 指向的地址 -------
+        tmp_inode->direct_bk[i].seg_no = free_seg_no;
         tmp_inode->direct_bk[i].bk_no = i;
     }
-    tmp_inode->indirect_bk.seg_no = 0;
+    tmp_inode->indirect_bk.seg_no = free_seg_no;
     tmp_inode->indirect_bk.bk_no = i;
-    //-----??-----------------------------------
+    //-----??跟翁旭东check-------------------------------
+    
+    
     tmp_inode->mode = 0;
     tmp_inode->userID = getuid();
     tmp_inode->groupID = getgid();
@@ -448,7 +452,8 @@ int Log_Create()
     //---- initialize the tail_log_addr--------------------
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     tail_log_addr->seg_no = free_seg_no;
-    tail_log_addr->bk_no = 1;
+    //-- 该seg的前面几个bk存了ifile的inode--------
+    tail_log_addr->bk_no = DIRECT_BK_NUM + 1;
  
     //-------for last_log_addr in checkpoint--------------
     memcpy(checkpoint->last_log_addr, tail_log_addr, sizeof(LogAddress));
@@ -1081,9 +1086,13 @@ void pushToDisk(LogAddress * log_addr)
         time(&t);
         sut_walker->modify_time = t;
 
+
+//---??need solved with Inode info------------------------
         //----------怎麽确定 num_live_bk ???----------------
         //--- 感觉要结合 seg_sum_entry 的file bk和inode 得到真实的num_live_bk-
         sut_walker->num_live_bk = bks_per_seg;
+
+
 
         Flash_Close(flash);
     }
@@ -1163,8 +1172,6 @@ int Log_Free(LogAddress * log_addr, u_int length)
 
     u_int offset = (log_addr->seg_no * seg_size + log_addr->bk_no * bk_size)
         / FLASH_SECTORS_PER_BLOCK;
-
-
 
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
