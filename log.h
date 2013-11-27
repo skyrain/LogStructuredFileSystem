@@ -158,7 +158,7 @@ typedef struct LogAddrList
 {
     LogAddress log_addr;
     struct LogAddrList * next;
-}
+}LogAddrList;
 
 
 //super log segment 存整个log的信息和checkpoint等

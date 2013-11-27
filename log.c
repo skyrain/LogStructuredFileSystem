@@ -13,12 +13,12 @@
 //--pre knowledge: seg_size is whole number----
 //---- of FLASH_SECTORS_PER_BLOCK--------------------
 //--??假设 0 为 "u_int block"的最小值------
-u_int find_wear_bk(LogAddress * log_addr)
+int find_wear_bk(LogAddress * log_addr)
 {
-    u_int wear_bk_no = 0;
+    int wear_bk_no = 0;
 
     //identify the log_addr is which sector (start from 1 not 0)
-    u_int sec_offset = log_addr->seg_no * seg_size
+    int sec_offset = log_addr->seg_no * seg_size
         + log_addr->bk_no * bk_size + 1;
 
     while(sec_offset > 0)
@@ -55,9 +55,7 @@ bool is_in_wearlimit(LogAddress * log_addr)
 //--requitement: super_seg already intialized--------------
 bool need_change_cp_loc()
 {
-    LogAddrList * cp_addr_walker = calloc(1, sizeof(LogAddrList));
-    cp_addr_walker->log_addr.seg_no = super_seg->cp_addr->log_addr.seg_no;
-    cp_addr_walker->log_addr.bk_no = super_seg->cp_addr->log_addr.bk_no;
+    LogAddrList * cp_addr_walker = super_seg->cp_addr;
 
     LogAddress * tmp_log_addr = calloc(1, sizeof(LogAddress));
     tmp_log_addr->seg_no = cp_addr_walker->log_addr.seg_no;
@@ -70,6 +68,7 @@ bool need_change_cp_loc()
         if(!is_in_wearlimit(tmp_log_addr))
         {
             return_value = true;
+            free(tmp_log_addr);
             break;
         }
         else
@@ -88,6 +87,7 @@ bool need_change_cp_loc()
             }
         }
     }
+    free(tmp_log_addr);
 
     return return_value;
 }
@@ -108,6 +108,7 @@ void get_checkpoint_to_memory()
     
     LogAddrList * cp_addr_walker = super_seg->cp_addr; 
     u_int buffer_offset = 0;
+
     while(cp_addr_walker != NULL)
     {
         void * tmp_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
@@ -119,6 +120,7 @@ void get_checkpoint_to_memory()
 
         cp_addr_walker = cp_addr_walker->next;
     }
+
     Flash_Close(flash);
     
     //-----cast buffer to checkpoint type-----------
@@ -265,13 +267,13 @@ void store_checkpoint()
     Flash_Flags flags = FLASH_SILENT;
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
-    FLash flash = Flash_Open(fl_file, flags, blocks);
+    Flash flash = Flash_Open(fl_file, flags, blocks);
     LogAddrList * cp_addr_walker = super_seg->cp_addr;
     
     u_int buffer_offset = 0;
     while(cp_addr_walker != NULL)
     {
-        u_int sec_offset = cp_addr_walker->log_addr->seg_no;
+        u_int sec_offset = cp_addr_walker->log_addr.seg_no;
         sec_offset = sec_offset * seg_size;
         //---1. fill the seg with relative part of checkpoint------       
         Flash_Write(flash, sec_offset, seg_size, buffer + buffer_offset);
@@ -280,7 +282,7 @@ void store_checkpoint()
         //----2.In seg usage table --------------------------------
         //----tag the seg storing cp to be is_checkpoint = true ----
         Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
-        while(sut_walker->seg_no != cp_addr_walker->log_addr->seg_no)
+        while(sut_walker->seg_no != cp_addr_walker->log_addr.seg_no)
             sut_walker = sut_walker->next;
         sut_walker->is_checkpoint = true;
         
@@ -307,11 +309,9 @@ int Log_Create()
     u_int checkpoint_size = 0;
     while(checkpoint_size * bk_size * FLASH_SECTOR_SIZE < cal_tmp)
         checkpoint_size ++;
-    //---guarantee checkpoint size to be whole number of seg size---
-    u_int cp_tmp = checkpoint_size;
-    if(checkpoint_size % bks_per_seg != 0)
-      checkpoint_size = (checkpoint_size / bks_per_seg) * bks_per_seg
-          + bks_per_seg;  
+    //---guarantee checkpoint size to be whole number of seg size - 1---
+    if(checkpoint_size % (bks_per_seg - 1) != 0)
+      checkpoint_size = (checkpoint_size / (bks_per_seg - 1)) * (bks_per_seg - 1) + bks_per_seg - 1;  
 
     cal_tmp = sizeof(Begin_bk *) + sizeof(Begin_bk) + sizeof(Seg_sum_bk)
        +  sizeof(Seg_sum_entry) * (seg_num - 1);
@@ -405,12 +405,6 @@ int Log_Create()
     tmp_inode->ino = -1;
     tmp_inode->filetype = 0;
     tmp_inode->filesize = 0;
-    tmp_inode->filename[0] = 'i';
-    tmp_inode->filename[1] = 'f';
-    tmp_inode->filename[2] = 'i';
-    tmp_inode->filename[3] = 'l';
-    tmp_inode->filename[4] = 'e';
-
 
     //----??跟翁旭东check---------------------------------
     for(i = 0; i < DIRECT_BK_NUM; i++)
@@ -915,7 +909,7 @@ void get_slog_to_memory()
     //--for cp_addr in super_seg--------------------------------------
     bytes_offset += sizeof(Super_seg);
     LogAddrList * la_walker = (LogAddrList *)calloc(1, sizeof(LogAddrList));
-    super->cp_addr = la_walker;
+    super_seg->cp_addr = la_walker;
     while(la_walker != NULL)
     {
         LogAddrList * la = (LogAddrList *)(buffer + bytes_offset);
@@ -994,14 +988,17 @@ void locate_tail_log_addr_from_begin()
         //---- if the seg is not seg storing cp---------
         if(sut_walker->is_checkpoint == false)
         {
+            LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
             tmp_addr->seg_no = i;
             tmp_addr->bk_no = 1;
             //---- if this seg has available bk to store data---
             if(!is_remain_seg_not_usable(tmp_addr))
             {
                 locate_tail_log_addr_bk(tmp_addr);
+                free(tmp_addr);
                 break;
             } 
+            free(tmp_addr);
         }
     }
 }
@@ -1123,7 +1120,7 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
 
     //-------update seg usage table------------------
     int i;
-    Seg_usage_table * sut_walker = super_seg->seg_usage_table;
+    Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
     for(i = 0; i < seg_num; i++)
     {
         if(sut_walker->seg_no == log_addr->seg_no)
