@@ -112,15 +112,16 @@ void get_checkpoint_to_memory()
     while(cp_addr_walker != NULL)
     {
         void * tmp_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        u_int sec_offset = cp_addr_walker->log_addr.seg_no * bks_per_seg;
+        u_int sec_offset = cp_addr_walker->log_addr.seg_no * bks_per_seg * bk_size;
         Flash_Read(flash, sec_offset, seg_size, tmp_buffer);
-        memcpy(buffer + buffer_offset, tmp_buffer, seg_size * FLASH_SECTOR_SIZE);
+        memcpy(buffer + buffer_offset, tmp_buffer + bk_size * FLASH_SECTOR_SIZE, 
+               (seg_size - bk_size) * FLASH_SECTOR_SIZE);
         buffer_offset += seg_size * FLASH_SECTOR_SIZE;
         free(tmp_buffer);
 
         cp_addr_walker = cp_addr_walker->next;
     }
-
+// -------- 检查Flash_Read是不是读整个的seg,注意数据只是第一个bk以后才用---
     Flash_Close(flash);
     
     //-----cast buffer to checkpoint type-----------
@@ -366,10 +367,12 @@ int Log_Create()
     cp_addr->next = NULL;
     s_seg->cp_addr = calloc(1, sizeof(LogAddrList));
     memcpy(s_seg->cp_addr, cp_addr, sizeof(LogAddrList));
-    free(cp_addr); 
     memcpy(s_seg_buffer, s_seg, sizeof(Super_seg));
     bytes_offset += sizeof(Super_seg);
-    
+    //--- store the initial cp_addr, since Flash_Write is not --
+    //-- smart enough to store the second layer contents ------
+    memcpy(s_seg_buffer + bytes_offset, cp_addr, sizeof(LogAddrList));
+    free(cp_addr);
     free(s_seg);
 
     Flash_Write(flash, 0, seg_size, s_seg_buffer); 
