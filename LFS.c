@@ -262,11 +262,13 @@ int main(int argc, char *argv[])
    
     void * start_buffer = calloc(1, FLASH_SECTOR_SIZE);
     Flash_Flags flags = FLASH_SILENT;
-    //-- note: !!可以只open flash的一个block 大小 ---
+    //-- note: !!可以只open flash的一个earse block 大小 ---
+    //-- 且只读一个sector的数据足矣-----------
     u_int tmp = 1;
     u_int * blocks = &tmp;
-    Flash   flash = Flash_Open(fl_file, flags, blocks);
-    Flash_Read(flash, 0, 1, start_buffer);
+    Flash   flash_0 = Flash_Open(fl_file, flags, blocks);
+    Flash_Read(flash_0, 0, 1, start_buffer);
+    Flash_Close(flash_0);
     Super_seg * s_seg  = (Super_seg *)start_buffer;
     sec_num = s_seg->sec_num;
     seg_size = s_seg->seg_size;

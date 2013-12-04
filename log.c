@@ -39,6 +39,8 @@ bool is_in_wearlimit(LogAddress * log_addr)
     //blocks : # of blocks in the flash
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
+
+    //------ 有错 ？？---------------
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     u_int * wear = calloc(1, sizeof(u_int)); 
     Flash_GetWear(flash, wear_bk_no, wear);
@@ -47,6 +49,8 @@ bool is_in_wearlimit(LogAddress * log_addr)
     bool return_value = true;
     if(*wear > wearlimit)
         return_value = false;
+
+    free(wear);
 
     return return_value;
 }
@@ -151,7 +155,9 @@ void get_checkpoint_to_memory()
         memcpy(sut_walker, sut, sizeof(Seg_usage_table));
         sut_walker = sut_walker->next;
     }
-    
+    //-- for curr_time of checkpoint,得到之前存该cp之time stamp -------
+    memcpy(&(checkpoint->curr_time), buffer + bytes_offset, sizeof(time_t));
+    bytes_offset += sizeof(time_t); 
     //--------for last log addr---------
     checkpoint->last_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     memcpy(checkpoint->last_log_addr, buffer + bytes_offset, sizeof(LogAddress)); 
@@ -253,6 +259,18 @@ void store_checkpoint()
     memcpy(buffer + bytes_offset, checkpoint->ifile, sizeof(Inode));
     bytes_offset += sizeof(Inode);
     //---- for seg_usage_table of checkpoint----------------
+    //----1.tag the seg storing cp to be is_checkpoint = true ----
+    LogAddrList * cp_addr_walker = super_seg->cp_addr;
+    while(cp_addr_walker != NULL)
+    {
+        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+        while(sut_walker->seg_no != cp_addr_walker->log_addr.seg_no)
+            sut_walker = sut_walker->next;
+        sut_walker->is_checkpoint = true;
+
+        cp_addr_walker = cp_addr_walker->next;
+    }
+    //-- 2. turn seg_usage_table into buffer ---------------------
     int i;
     for(i = 1; i < seg_num; i++)
     {
@@ -266,18 +284,18 @@ void store_checkpoint()
         memcpy(buffer + bytes_offset, sut_walker, sizeof(Seg_usage_table));
         bytes_offset += sizeof(Seg_usage_table);
     }
-    
     //---for curr_time of checkpoint------------
     memcpy(buffer + bytes_offset, &(checkpoint->curr_time), sizeof(time_t));
     bytes_offset += sizeof(time_t);
     //---- for last_log_addr--------------------
     memcpy(buffer + bytes_offset, checkpoint->last_log_addr, sizeof(LogAddress));    
+    
     //---2. store the buffer into right cp location----------
     Flash_Flags flags = FLASH_SILENT;
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks);
-    LogAddrList * cp_addr_walker = super_seg->cp_addr;
+    cp_addr_walker = super_seg->cp_addr;
     
     u_int buffer_offset = 0;
     while(cp_addr_walker != NULL)
@@ -289,21 +307,10 @@ void store_checkpoint()
         //---1. fill the seg with relative part of checkpoint------       
         Flash_Write(flash, sec_offset, seg_size - bk_size, buffer + buffer_offset);
         buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;  
-        
-        //----2.In seg usage table --------------------------------
-        //----tag the seg storing cp to be is_checkpoint = true ----
-
-// --------?? ------------        
-// ---- 此部分应在Flash_write 前完成-- 可能写在get_cp_loc比较好---
-
-
-        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
-        while(sut_walker->seg_no != cp_addr_walker->log_addr.seg_no)
-            sut_walker = sut_walker->next;
-        sut_walker->is_checkpoint = true;
-        
-        cp_addr_walker = cp_addr_walker->next;
+       
+        cp_addr_walker = cp_addr_walker->next;       
     }
+    Flash_Close(flash);
 }
 
 /*
@@ -684,7 +691,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
-    u_int tmp = bks_per_seg * super_seg->seg_num;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
    
@@ -814,7 +821,7 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
-    u_int tmp = bks_per_seg * seg_num;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
     Flash_Read(flash, seg_no * seg_size, seg_size, buffer);
@@ -866,7 +873,7 @@ void get_log_to_memory(LogAddress * log_addr)
     void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
-    u_int tmp = bks_per_seg * seg_num;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
     Flash_Read(flash, log_addr->seg_no * seg_size, seg_size, buffer);
@@ -1084,7 +1091,7 @@ void pushToDisk(LogAddress * log_addr)
         Flash_Flags flags = FLASH_SILENT;
 
         //blocks : # of blocks in the flash
-        u_int tmp = bks_per_seg * seg_num;
+        u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
         u_int * blocks = &tmp;
         Flash   flash = Flash_Open(fl_file, flags, blocks);
         Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
@@ -1193,7 +1200,7 @@ int Log_Free(LogAddress * log_addr, u_int length)
     Flash_Flags flags = FLASH_SILENT;
 
     //blocks : # of blocks in the flash
-    u_int tmp = bks_per_seg * seg_num;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     Flash_Erase(flash, offset, erase_bks);
