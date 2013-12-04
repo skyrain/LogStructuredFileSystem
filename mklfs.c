@@ -4,24 +4,6 @@
 #include "flash.h"
 #include "log.h"
 
-//??----------还没有管 wearlimit-------------------------
-
-int main(int argc, char * argv[])
-{
-    //erase bk size
-    //----------------------还未用---------------
-    u_int er_bk_size = 16;   
-
-    //---------------default value----------------------
-    wearlimit = 1000;
-    fl_file = (char *)calloc(1, 8);
-    strcpy(fl_file, "File");         
-
-    //-----should always be 16 的整数倍
-    sec_num = 1024;
-    bk_size = 2;
-    bks_per_seg = 32;
-
 /*  
   mklfs [options] file
     -l size, --segment=size
@@ -34,6 +16,19 @@ int main(int argc, char * argv[])
         Wear limit for erase blocks. The default is 1000.
 
 */
+
+int main(int argc, char * argv[])
+{
+    //---------------default value----------------------
+    wearlimit = 1000;
+    fl_file = (char *)calloc(1, 8);
+    strcpy(fl_file, "File");         
+
+    //----- sec_num & bks_per_seg should always be 16 的整数倍
+    sec_num = 1024;
+    bk_size = 2;
+    bks_per_seg = 32;
+
     int ch;  
     while ((ch = getopt(argc, argv, "l:s:b:w:")) != -1)  
     {  
@@ -73,7 +68,6 @@ int main(int argc, char * argv[])
     }  
     strcpy(fl_file, argv[argc - 1]);
 
- //??在多考虑其他边缘情况比如 sec_num = 0
     seg_size = bks_per_seg * bk_size;
     seg_num = sec_num / bk_size / bks_per_seg;
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
@@ -89,13 +83,13 @@ int main(int argc, char * argv[])
         printf("Seg size must be 16 whole times!\n");
         return 0;
     }
-    
+
     if(seg_size > sec_num)
     {
         printf("Segment size exceed the entire flash memory!\n");
         return 0;
     }
-    
+
     if(sec_num % bk_size != 0)
     {
         printf("Not whole number of blocks!\n");
@@ -111,20 +105,21 @@ int main(int argc, char * argv[])
     //create and format flash memory & create log in memory
     Log_Create();
 
-    //------------store flashe memory configuration variables--------
+    /*
+    //------------store flash memory configuration variables--------
     char* buffer = get_current_dir_name();
     char * s = "/config.ini";
     char * config = (char *)calloc(1, strlen(buffer) + strlen(s));
     strcpy(config, buffer);
     strcpy(config + strlen(buffer), s);
-   
+
     FILE *fp;
     if((fp=fopen(config,"wb")) == NULL) 
     { 
         printf("\nopen file error"); 
         exit(1); 
     }
-   
+
     printf("dir: %s\n", config);
 
     char store_seg_size[5];
@@ -140,5 +135,5 @@ int main(int argc, char * argv[])
     fputs("\n", fp);
 
     fclose(fp); 
-
+    */
 }

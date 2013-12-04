@@ -150,7 +150,7 @@ typedef struct Checkpoint
     Inode * ifile;
     Seg_usage_table * seg_usage_table;
     time_t curr_time;
-    LogAddress * last_log_addr;
+    LogAddress * last_log_addr; // -- 存直接可以开始写的bk, include itself ---
 }Checkpoint;
 
 

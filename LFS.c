@@ -22,10 +22,11 @@
 #include "flash.h"
 #include "File.h"
 
-//**************************??注意 只用部分全局变量*******************
+//**************************注意 只用部分全局变量*******************
 
 //----------------gloabal value-----------------------
 extern Super_seg * super_seg;
+extern Checkpoint * checkpoint;
 extern Disk_cache * disk_cache;
 
 //-------points to the logAddress that could start to write data-------
@@ -190,8 +191,6 @@ static struct fuse_operations LFS_oper = {
 
 int main(int argc, char *argv[])
 {
-
-    int i;
     int status = 0;
     char **nargv = NULL;
 
@@ -226,9 +225,8 @@ int main(int argc, char *argv[])
     printf("%s\n", argv[i]);
     }
      */
-    //---------1. -------filename:用于打开disk-------------------
-
-    //----- ??(phase 2) get tail_log_addr--------------
+    /*
+    //---------1.filename:用于打开disk-------------------
     //----- get global vairables in log.h---------------
     char* buffer = get_current_dir_name();
     char * s = "/config.ini";
@@ -255,23 +253,39 @@ int main(int argc, char *argv[])
     //  fclose(fp);
     sec_num = (u_int)atoi(store_sec_num); 
     free(config);
-
-    seg_num = sec_num / seg_size;
-    get_slog_to_memory();
-
-    tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
-
-    tail_log_addr->seg_no = 1;
-    tail_log_addr->bk_no =1;
-
-    sec_num = super_seg->sec_num;
-    bk_size= super_seg->bk_size;
+    */
+    //--- super seg always stored at 0th seg ----
+    //--- the entire 0th seg is used for super seg ---
+    //--- note: since FLASH_SECTOR_SIZE 512 & sizeof(Super_seg) = 36--
+    //--- just need to read one sector to get to know sec_num, seg_size--
+    //-- which are of Super_seg ---------------------  
+   
+    void * start_buffer = calloc(1, FLASH_SECTOR_SIZE);
+    Flash_Flags flags = FLASH_SILENT;
+    //-- note: !!可以只open flash的一个block 大小 ---
+    u_int tmp = 1;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+    Flash_Read(flash, 0, 1, start_buffer);
+    Super_seg * s_seg  = (Super_seg *)start_buffer;
+    sec_num = s_seg->sec_num;
+    seg_size = s_seg->seg_size;
+    bk_size= s_seg->bk_size;
     bks_per_seg = seg_size / bk_size;
+    seg_num = sec_num / seg_size;
+    free(s_seg);
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
     BLOCK_SIZE = bk_content_size;
+   
+    get_slog_to_memory();
+    get_checkpoint_to_memory();
 
-    inode_ifile = super_seg->checkpoint->ifile;
+    tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
+    tail_log_addr->seg_no = checkpoint->last_log_addr->seg_no;
+    tail_log_addr->bk_no = checkpoint->last_log_addr->bk_no;
+
+    inode_ifile = checkpoint->ifile;
 
     get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------

@@ -78,8 +78,11 @@ bool need_change_cp_loc()
             if(tmp_log_addr->bk_no == bks_per_seg - 1)
             {
                 cp_addr_walker = cp_addr_walker->next;
-                tmp_log_addr->seg_no = cp_addr_walker->log_addr.seg_no;
-                tmp_log_addr->bk_no = cp_addr_walker->log_addr.bk_no;
+                if(cp_addr_walker != NULL)
+                {
+                    tmp_log_addr->seg_no = cp_addr_walker->log_addr.seg_no;
+                    tmp_log_addr->bk_no = cp_addr_walker->log_addr.bk_no;
+                }
             }
             else
             {
@@ -116,12 +119,12 @@ void get_checkpoint_to_memory()
         Flash_Read(flash, sec_offset, seg_size, tmp_buffer);
         memcpy(buffer + buffer_offset, tmp_buffer + bk_size * FLASH_SECTOR_SIZE, 
                (seg_size - bk_size) * FLASH_SECTOR_SIZE);
-        buffer_offset += seg_size * FLASH_SECTOR_SIZE;
+        buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;
         free(tmp_buffer);
 
         cp_addr_walker = cp_addr_walker->next;
     }
-// -------- 检查Flash_Read是不是读整个的seg,注意数据只是第一个bk以后才用---
+    
     Flash_Close(flash);
     
     //-----cast buffer to checkpoint type-----------
@@ -224,12 +227,17 @@ void get_cp_loc()
 //--- do not need to update seg usage table storing cp---
 void store_checkpoint()
 {
+    //-- update timestamp ---
+    time_t t;
+    time(&t);
+    checkpoint->curr_time = t;
+
     //----找到存cp的segs---------------
     //note: 若需要移动cp到新的地址意味着原来存cp的seg worn out了---
     //----因此也不需要设置原来的seg的ischeckpoint属性为flase---- 
     get_cp_loc();
     u_int checkpoint_size = super_seg->checkpoint_size;
-    
+     
     //----------把cp数据存在buffer里，然后按seg 分割存入每个seg---
     //--存checkpoint的 seg 的对应seg_usage_table的is_checkpoint属性为true-
     //---拿整数个seg存checkpoint--------------
@@ -260,7 +268,7 @@ void store_checkpoint()
     }
     
     //---for curr_time of checkpoint------------
-    memcpy(buffer + bytes_offset, checkpoint->curr_time, sizeof(time_t));
+    memcpy(buffer + bytes_offset, &(checkpoint->curr_time), sizeof(time_t));
     bytes_offset += sizeof(time_t);
     //---- for last_log_addr--------------------
     memcpy(buffer + bytes_offset, checkpoint->last_log_addr, sizeof(LogAddress));    
@@ -276,12 +284,19 @@ void store_checkpoint()
     {
         u_int sec_offset = cp_addr_walker->log_addr.seg_no;
         sec_offset = sec_offset * seg_size;
+        //-- start write from 1st bk not 0th bk ---
+        sec_offset = sec_offset + bk_size;
         //---1. fill the seg with relative part of checkpoint------       
-        Flash_Write(flash, sec_offset, seg_size, buffer + buffer_offset);
-        buffer_offset += seg_size * FLASH_SECTOR_SIZE;  
+        Flash_Write(flash, sec_offset, seg_size - bk_size, buffer + buffer_offset);
+        buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;  
         
         //----2.In seg usage table --------------------------------
         //----tag the seg storing cp to be is_checkpoint = true ----
+
+// --------?? ------------        
+// ---- 此部分应在Flash_write 前完成-- 可能写在get_cp_loc比较好---
+
+
         Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
         while(sut_walker->seg_no != cp_addr_walker->log_addr.seg_no)
             sut_walker = sut_walker->next;
@@ -380,7 +395,7 @@ int Log_Create()
     //-----------------------------------------------------------
     get_slog_to_memory(); 
     //----1. initialize super_seg->cp_addr list-------------
-    u_int cp_addr_num = checkpoint_size / bks_per_seg;   
+    u_int cp_addr_num = checkpoint_size / (bks_per_seg - 1);   
     LogAddrList * cp_log_addr_walker = super_seg->cp_addr;
     u_int free_seg_no = 1;
     while(cp_addr_num > 0)
@@ -420,7 +435,6 @@ int Log_Create()
     tmp_inode->indirect_bk.bk_no = i;
     //-----??跟翁旭东check-------------------------------
     
-    
     tmp_inode->mode = 0;
     tmp_inode->userID = getuid();
     tmp_inode->groupID = getgid();
@@ -450,7 +464,9 @@ int Log_Create()
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
     tail_log_addr->seg_no = free_seg_no;
     //-- 该seg的前面几个bk存了ifile的inode--------
-    tail_log_addr->bk_no = DIRECT_BK_NUM + 1;
+    //-- 考虑一个indirect bk ---
+    //---- ?? --------
+    tail_log_addr->bk_no = DIRECT_BK_NUM + 2;
  
     //-------for last_log_addr in checkpoint--------------
     memcpy(checkpoint->last_log_addr, tail_log_addr, sizeof(LogAddress));
