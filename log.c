@@ -40,7 +40,7 @@ bool is_in_wearlimit(LogAddress * log_addr)
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
 
-    //------ 有错 ？？---------------
+    //------ 有错 ？？---------------?? 因为Open没关
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     u_int * wear = calloc(1, sizeof(u_int)); 
     Flash_GetWear(flash, wear_bk_no, wear);
