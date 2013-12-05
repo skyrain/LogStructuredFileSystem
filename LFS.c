@@ -67,6 +67,7 @@ extern u_int bk_content_size;
 //------chosen by user----------------
 extern u_int cache_seg_num;
 
+extern Flash flash;
 //**************************************************************
 
 
@@ -279,6 +280,11 @@ int main(int argc, char *argv[])
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
     BLOCK_SIZE = bk_content_size;
+
+    //--- initialize global value "flash"-------
+        
+
+
    
     get_slog_to_memory();
     get_checkpoint_to_memory();

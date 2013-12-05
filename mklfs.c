@@ -101,6 +101,10 @@ int main(int argc, char * argv[])
         printf("Not whole number of segs!\n");
     }
 
+    //--------- initialize global value "flash" ------
+
+
+
     //---------------------------------------------------------------
     //create and format flash memory & create log in memory
     Log_Create();

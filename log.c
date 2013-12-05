@@ -40,7 +40,6 @@ bool is_in_wearlimit(LogAddress * log_addr)
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
 
-    //------ 有错 ？？---------------?? 因为Open没关
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     u_int * wear = calloc(1, sizeof(u_int)); 
     Flash_GetWear(flash, wear_bk_no, wear);
@@ -688,13 +687,12 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
     //then store it on cache from the 1st cache seg
     //----------1. read data from flash-----------
     buffer = calloc(1, length);
-
     //choose the model of Flash
     Flash_Flags flags = FLASH_SILENT;
     u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
     u_int * blocks = &tmp;
     Flash flash = Flash_Open(fl_file, flags, blocks); 
-   
+  
     u_int sec_offset = log_addr->seg_no * seg_size;
     u_int bks_remain = bks_per_seg - log_addr->bk_no;
     u_int bks_tobe_read = length_in_bk(length);
