@@ -253,6 +253,7 @@ Flash_Open(
     flash->file = file;
     flash->flags = flags;
     flash->fd = open(file, O_RDWR);
+    
     if (flash->fd < 0) {
 	rc = 1;
 	goto done;

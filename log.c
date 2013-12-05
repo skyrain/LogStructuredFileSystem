@@ -1128,6 +1128,9 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
     memcpy(seg_in_memory + bk_size * log_addr->bk_no * FLASH_SECTOR_SIZE,
             buffer, bk_size * FLASH_SECTOR_SIZE);
 
+//---- 调用三次之后seg_in_memory的seg_sum_entry无法access --
+//--- ??? ---
+
     Seg_sum_entry * sse_walker = seg_in_memory->begin_bk->ssum_bk->seg_sum_entry;
     //----change the seg_in_memory's Begin_bk---------
     while(sse_walker != NULL)

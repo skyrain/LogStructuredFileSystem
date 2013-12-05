@@ -67,7 +67,6 @@ extern u_int bk_content_size;
 //------chosen by user----------------
 extern u_int cache_seg_num;
 
-extern Flash flash;
 //**************************************************************
 
 
@@ -215,10 +214,14 @@ int main(int argc, char *argv[])
     //------from second last argv get the flashmemory name------ 
     filename = (char *)calloc(1, 8);
     strcpy(filename, argv[argc - 2]);
-
-    fl_file = (char *)calloc(1, 8);
-    strcpy(fl_file, filename);
-
+   
+    char* buffer = get_current_dir_name();
+    char * s = (char *)calloc(1, 8);
+    strcpy(s, filename);
+    fl_file = (char *)calloc(1, strlen(buffer) + strlen(s) + 1);
+    strcpy(fl_file, buffer);
+    strcpy(fl_file + strlen(buffer), "/");
+    strcpy(fl_file + strlen(buffer) + 1, s);
     /*    
     //print all the arguments
     for(i = 0; i < argc; i++)
@@ -280,11 +283,6 @@ int main(int argc, char *argv[])
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
     BLOCK_SIZE = bk_content_size;
-
-    //--- initialize global value "flash"-------
-        
-
-
    
     get_slog_to_memory();
     get_checkpoint_to_memory();
