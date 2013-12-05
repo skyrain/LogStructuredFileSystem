@@ -174,6 +174,97 @@ int LFS_Unlink(const char *path)
     return Dir_Delete_File(path);
 }
 
+int LFS_Link(const char *SourcePath, const char *TargetPath){
+        int status = Dir_Link(SourcePath, TargetPath);                                                                    
+        if( status )
+        {
+                print(" Error when doing Dir_link \n");
+                return status;
+        }
+        return status;
+}
+
+int LFS_ReadLink(const char *path, char *buffer, size_t size){                                                            
+        int status;      
+        struct fuse_file_info fi;                                                                                         
+
+        printf("LFS is reading symbolic link '%s'\n", path);                                                         
+
+        status = LFS_open(path, &fi); 
+        if( status )     
+        {
+                printf("ERROR in readlink of LFS_Open\n");                                                         
+                return status;    
+        }
+        status = LFS_read(path, buffer, size, 0, &fi);                                                                    
+        if (status != size)       
+        {
+                printf("ERROR in readlink of LFS_Read\n");                                                         
+                return status;    
+        }
+
+        return 0;        
+}
+
+int LFS_SymLink(const char *SourcePath, const char *TargetPath){                                                          
+        int status;      
+        struct fuse_file_info fi; 
+        mode_t mode = S_IFLNK | 0777;                                                                 
+
+        printf("LFS is creating a symbloic link from '%s' to '%s'.\n",
+                                SourcePath, TargetPath);                                                                  
+
+        status = LFS_Create(TargetPath, mode, &fi);                                                                       
+        if( status )     
+        {
+                printf("ERROR in LFS_SymLink in LFS_Create \n");                                                         
+                return status;    
+        }
+        status = LFS_Write(TargetPath, SourcePath, strlen(SourcePath) + 1, 0, &fi);                                       
+        if (status != strlen(SourcePath) + 1){
+                printf("ERROR in SymLink of LFS_Write");   
+                return -1;   
+        }
+        return 0;
+}
+
+int LFS_Rmdir(const char *path){
+        // Remove a directory
+        printf("LFS is removing directory '%s'.\n", path);
+        return Dir_Delete_File(path);
+}
+
+int LFS_Rename(const char *frompath, const char *topath){                                                                 
+        int status;      
+        printf("LFS is renaming '%s' to '%s'\n", frompath, topath);                                                  
+
+        status = LFS_link(frompath, topath); 
+        if( status )     
+        {                
+                printf("ERROR in LFS_Rename when LFS_Link \n");                                                         
+                return status;    
+        }
+        status = LFS_Unlink(frompath);
+        if( status )     
+        {
+                printf("ERROR in LFS_Rename when LFS_Unlink \n");                                                      
+                return status;    
+        }
+        return status;   
+}
+
+void LFS_Destroy()
+{
+	printf("LFS is destroying \n");
+	Dir_Layer_Destroy();
+}
+
+int LFS_Statfs(const char *path, struct statvfs *Statvfs)
+{
+	printf("LFS is getting FS statistics from '%s' \n", path);
+	return Dir_statfs(path, Statvfs);
+}
+
 static struct fuse_operations LFS_oper = {
     .init = LFS_Init,
     .getattr = LFS_GetAttr,
@@ -186,6 +277,13 @@ static struct fuse_operations LFS_oper = {
     .mkdir = LFS_Mkdir,
     .truncate = LFS_Truncate,
     .unlink = LFS_Unlink,
+    .link = LFS_Link,
+    .readlink = LFS_ReadLink,
+    .symlink = LFS_SymLink,
+    .rmdir = LFS_Rmdir,
+    .rename = LFS_Rename,
+    .destroy = LFS_Destroy,
+    .statfs = LFS_Statfs,
 };
 
 
