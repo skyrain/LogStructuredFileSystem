@@ -21,5 +21,12 @@ int LFS_Write(const char *path, const char *buf, size_t size, off_t offset, stru
 int LFS_Mkdir(const char *dir_name, mode_t mode);
 int LFS_Truncate(const char *path, off_t offset);
 int LFS_Unlink(const char *path);
+int LFS_Link(const char *SourcePath, const char *TargetPath);
+int LFS_ReadLink(const char *path, char *buffer, size_t size);
+int LFS_SymLink(const char *SourcePath, const char *TargetPath);
+int LFS_rmdir(const char *path);
+int LFS_Rename(const char *frompath, const char *topath);
+void LFS_Destroy();
+int LFS_statfs(const char *path, struct statvfs *Statvfs);
 
 #endif
