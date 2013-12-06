@@ -6,6 +6,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+
+/*
+ *
+ *?? means not for sure or need improve in future
+ *
+ *
+ **********/
+
 //------Note: at least 3 free segment------------
 
 //----according to log addr, find the input value --
@@ -312,12 +320,6 @@ void store_checkpoint()
     Flash_Close(flash);
 }
 
-/*
- *
- *?? means not for sure or need improve in future
- *
- *
- **********/
 
 //wearlimit: 1000, seg:32 bk, b: 2 sector, total sect: 1024
 //file: flash name, total_sec: flash size
@@ -430,16 +432,14 @@ int Log_Create()
     tmp_inode->filetype = 0;
     tmp_inode->filesize = 0;
 
-    //----??跟翁旭东check---------------------------------
     for(i = 0; i < DIRECT_BK_NUM; i++)
     {
         //----- seg_no 初始化为 free_seg_no 指向的地址 -------
-        tmp_inode->direct_bk[i].seg_no = free_seg_no;
-        tmp_inode->direct_bk[i].bk_no = i;
+        tmp_inode->direct_bk[i].seg_no = -1;//free_seg_no;
+        tmp_inode->direct_bk[i].bk_no = -1;//i;
     }
-    tmp_inode->indirect_bk.seg_no = free_seg_no;
-    tmp_inode->indirect_bk.bk_no = i;
-    //-----??跟翁旭东check-------------------------------
+    tmp_inode->indirect_bk.seg_no = -1;//free_seg_no;
+    tmp_inode->indirect_bk.bk_no = -1;//i;
     
     tmp_inode->mode = 0;
     tmp_inode->userID = getuid();
@@ -468,11 +468,8 @@ int Log_Create()
     
     //---- initialize the tail_log_addr--------------------
     tail_log_addr = (LogAddress *)calloc(1, sizeof(LogAddress));
-    tail_log_addr->seg_no = free_seg_no;
-    //-- 该seg的前面几个bk存了ifile的inode--------
-    //-- 考虑一个indirect bk ---
-    //---- ?? --------
-    tail_log_addr->bk_no = DIRECT_BK_NUM + 2;
+    tail_log_addr->seg_no = 2;//free_seg_no;
+    tail_log_addr->bk_no = 1;//DIRECT_BK_NUM + 2;
  
     //-------for last_log_addr in checkpoint--------------
     memcpy(checkpoint->last_log_addr, tail_log_addr, sizeof(LogAddress));
