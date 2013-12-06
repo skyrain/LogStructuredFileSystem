@@ -548,24 +548,45 @@ void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 
 int Decrement_Seg_Usage( int segment, int block)
 {
-	// if the segment is at tail of the log, then set the corresponding block
-	// to be unused
-/*	if(segment == tail_log_addr->seg_no)
-	{
-		
-	}
-	else
-	{
-		Checkpoint *CK = checkpoint;
-	       	int i;
-		while( != segment)
-		{
-			CK->seg_usage_table
-		}
-		CK->seg_usage_table->
-		Seg_usage_table *entry = CK->seg_usage_table;
-		entry->num_live_bk -= 1;
-	}
-	*/
+        // if the segment is at tail of the log, then set the corresponding block
+        // to be unused
+        /*
+        if(segment == tail_log_addr->seg_no)
+        {
+                LogAddress *log_addr;
+                log_addr->seg_no = segment;
+                log_addr->bk_no = 0;
+
+                void get_log_to_memory(LogAddress * log_addr);
+                LogAddress *tail_temp = tail_log_addr;
+
+                while() 
+                {
+                                
+                }
+
+                if( seg_sum_entry->bk_no != block)
+                {
+                        file_no = FREE_BLOCK_NUM;
+                        file_bk_no = FREE_BLOCK_NUM;
+                        bk_no = FREE_BLOCK_NUM;
+                }
+        }
+        else
+        {
+                Checkpoint *CK = checkpoint;
+                Seg_usage_table *entry = CK->seg_usage_table;
+                while( entry->seg_no != segment)
+                {
+                        entry = entry->next;
+                }
+                
+                if( entry->seg_no = segment)
+                {
+                        entry->num_live_bk -= 1;
+                }
+        }
+        */
 }
+
 
