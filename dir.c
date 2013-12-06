@@ -61,7 +61,7 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 }
 
 //get file system statistics
-/*int Dir_statfs(const char *path, struct statvfs *Statvfs)
+int Dir_Statfs(const char *path, struct statvfs *Statvfs)
 {
 	int status;
 	int i;
@@ -79,7 +79,11 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 	}
 	Statvfs->f_favail = Statvfs->f_ffree;
 	
-	status = Log_statfs(&Statvfs->f_bsize, &Statvfs->f_blocks, &Statvfs->f_bfree);
+
+// ----- 最后添加 Log_Statfs ??? --------------------------
+
+
+	status = 0; //Log_Statfs(&Statvfs->f_bsize, &Statvfs->f_blocks, &Statvfs->f_bfree);
 	if(status) { printf("Error when call Log_Statfs\n"); return status;}
 	
 	Statvfs->f_frsize = Statvfs->f_bsize;
@@ -87,7 +91,6 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 	
 	return 0;
 }
-*/
 
 
 // open a directory or file

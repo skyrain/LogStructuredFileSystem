@@ -86,7 +86,8 @@ extern int Dir_Truncate_File();
 extern int Dir_Delete_File();
 extern int get_current_dir_name();
 extern int Dir_Read_Dir();
-
+extern int Dir_Link();
+extern int Dir_Statfs();
 // Initialize FS, return value will pass in the fuse_context to all
 // file operations.
 
@@ -178,7 +179,7 @@ int LFS_Link(const char *SourcePath, const char *TargetPath){
         int status = Dir_Link(SourcePath, TargetPath);                                                                    
         if( status )
         {
-                print(" Error when doing Dir_link \n");
+                printf(" Error when doing Dir_link \n");
                 return status;
         }
         return status;
@@ -190,13 +191,13 @@ int LFS_ReadLink(const char *path, char *buffer, size_t size){
 
         printf("LFS is reading symbolic link '%s'\n", path);                                                         
 
-        status = LFS_open(path, &fi); 
+        status = LFS_Open(path, &fi); 
         if( status )     
         {
                 printf("ERROR in readlink of LFS_Open\n");                                                         
                 return status;    
         }
-        status = LFS_read(path, buffer, size, 0, &fi);                                                                    
+        status = LFS_Read(path, buffer, size, 0, &fi);                                                                    
         if (status != size)       
         {
                 printf("ERROR in readlink of LFS_Read\n");                                                         
@@ -238,7 +239,7 @@ int LFS_Rename(const char *frompath, const char *topath){
         int status;      
         printf("LFS is renaming '%s' to '%s'\n", frompath, topath);                                                  
 
-        status = LFS_link(frompath, topath); 
+        status = LFS_Link(frompath, topath); 
         if( status )     
         {                
                 printf("ERROR in LFS_Rename when LFS_Link \n");                                                         
@@ -262,7 +263,7 @@ void LFS_Destroy()
 int LFS_Statfs(const char *path, struct statvfs *Statvfs)
 {
 	printf("LFS is getting FS statistics from '%s' \n", path);
-	return Dir_statfs(path, Statvfs);
+	return Dir_Statfs(path, Statvfs);
 }
 
 static struct fuse_operations LFS_oper = {
