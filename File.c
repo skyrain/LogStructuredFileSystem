@@ -46,8 +46,8 @@ int File_Init(Inode *Ino, int type)
         Ino->modify_Time = t;  
  
 	//some problem with the indirect and direct block structure
-	//Ino->indirect_bk.seg_no = FREE_BLOCK_NUM; phase 2
-	//Ino->indirect_bk.bk_no = FREE_BLOCK_NUM; phase 2
+	Ino->indirect_bk.seg_no = FREE_BLOCK_NUM;
+	Ino->indirect_bk.bk_no = FREE_BLOCK_NUM;
 
  	return 0;
 
@@ -94,7 +94,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 	printf("NumBlocks: %i\n", NumBlocks);
 
 	// a read request cannot over the max blocks number a Inode has
-	int MaxBlocks = DIRECT_BK_NUM; // phase 2 : + BlockSize_byte/sizeof(Block_pointer);
+	int MaxBlocks = DIRECT_BK_NUM + BlockSize_byte/sizeof(Block_pointer);
 	if(ReadEndBlock >= MaxBlocks)
 		return READ_ERROR;
 	
@@ -172,7 +172,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	// deal with some write error such as out of range.
 	// numBlocks is how many blocks going to write
 	int numBlocks = writeEndBlock - writeStartBlock + 1;
-	int maxNumBlocks = DIRECT_BK_NUM; // phase 2 + indirect
+	int maxNumBlocks = DIRECT_BK_NUM + BlockSize_byte/sizeof(Block_pointer);
 	if(writeEndBlock >= maxNumBlocks)
 		return -EFBIG;
 
@@ -228,7 +228,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 	int writeBlock;
 	LogAddress AddrWrite;
 	LogAddress *tailaddr;
-	//Block_pointer blockPointer;
+	Block_pointer *blockBuffer = NULL;
 	for(writeBlock = 0; writeBlock < numBlocks; writeBlock ++ )
 	{ 	
 		// write the orginal file which file block number is AddrWrite.bk_no
@@ -238,10 +238,68 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		
 		// File block number to be write, pass to the log write.
 		int fileBlockNumber = writeStartBlock + writeBlock;
+		if( fileBlockNumber < DIRECT_BK_NUM )
+		{
+			//update seg usage table if the block is unused before
+			if(Ino->direct_bk[fileBlockNumber].seg_no != FREE_BLOCK_NUM)
+				Decrement_Seg_Usage(Ino->direct_bk[fileBlockNumber].seg_no,
+						Ino->direct_bk[fileBlockNumber].bk_no);
+		}
+		else // if there is indirect block
+		{
+			if(blockBuffer == NULL)
+			// if we haven't read indirect block, read them off the flash
+			{
+				blockBuffer = (Block_pointer *)calloc(1, BlockSize_byte);
+				if(Ino->indirect_bk.seg_no == FREE_BLOCK_NUM)
+				{
+					int j;
+					for( j = 0; j < BlockSize_byte/sizeof(Block_pointer); j++)
+					{
+						blockBuffer[j].seg_no = FREE_BLOCK_NUM;
+						blockBuffer[j].bk_no = FREE_BLOCK_NUM;
+					}
+				}
+				else // read the file indirect block 
+				{       LogAddress *temp_logaddress;
+					temp_logaddress->seg_no = Ino->indirect_bk.seg_no;
+					temp_logaddress->bk_no = Ino->indirect_bk.bk_no;
+					status = Log_Read(temp_logaddress,1,blockBuffer);
+					if(status)
+					{
+						return status;
+					}
+				}
+			}
+			// change this pointer in indirect block
+			if(blockBuffer[fileBlockNumber - DIRECT_BK_NUM].seg_no != FREE_BLOCK_NUM)
+				Decrement_Seg_Usage(blockBuffer[fileBlockNumber - DIRECT_BK_NUM].seg_no, blockBuffer[fileBlockNumber - DIRECT_BK_NUM].bk_no);
+		}
+	}
+	
+	// write the indirect block content into the buffer
+
 		//Get_Block_pointer(Ino, writeBlock, &blockPointer);
+	
+	
+	for( writeBlock = 0; writeBlock < numBlocks; writeBlock ++)
+	{
+		int fileBlockNumber = writeStartBlock + writeBlock;
 		tailaddr = tail_log_addr;
-		Ino->direct_bk[fileBlockNumber].seg_no = tailaddr->seg_no;
-		Ino->direct_bk[fileBlockNumber].bk_no = tailaddr->bk_no;
+
+		// update the file blocks that are modified.
+		if (fileBlockNumber < DIRECT_BK_NUM)
+		{
+			Ino->direct_bk[fileBlockNumber].seg_no = tailaddr->seg_no;
+			Ino->direct_bk[fileBlockNumber].bk_no = tailaddr->bk_no;
+		}
+		else // this is for indirect blocks
+		{
+			blockBuffer[fileBlockNumber - DIRECT_BK_NUM].seg_no = tailaddr->seg_no;
+			blockBuffer[fileBlockNumber - DIRECT_BK_NUM].bk_no = tailaddr->bk_no;
+		}
+
+		// write to the flash
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
 		status  = Log_Write(Ino->ino, fileBlockNumber, BlockSize_byte, writePointer, tailaddr);
 		if(status)
@@ -249,23 +307,26 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 			printf("fail to write on the log, Log_Write\n");
 			return status;
 		}
-	}
-
-/*--------------------------------------------change seg usage table
-	Block_pointer *blockBuffer = NULL;
-	int i;
-	for(i = 0; i < numBlocks; i++)
-	{
-		int fileBlockNum = writeStartBlock + i;
-		if(fileBlockNum < DIRECT_BK_NUM)
+		
+		/*
+		if( fileBlockNumber < DIRECT_BK_NUM)
 		{
-			if(Ino->direct_bk[fileBlockNum].seg_no != FREE_BLOCK_NUM)
-				//update segment usage table ---???---
+			Ino->direct_bk[fileBlockNumber].seg_no = 
+			Ino->direct
 		}
-		// else read from the indirect block , phase 2 ---???---
+		*/
 	}
-------------------------------------------------------------------*/
-
+	// if w read write to indirect block need to clean up
+	if (blockBuffer != NULL)
+	{
+		if(Ino->indirect_bk.seg_no != FREE_BLOCK_NUM)
+			Decrement_Seg_Usage(Ino->indirect_bk.seg_no, Ino->indirect_bk.bk_no);
+		// push it back to the log
+		tailaddr = tail_log_addr;
+		status = Log_Write( Ino->ino, INDIRECT_BK_NUM, BlockSize_byte, blockBuffer, tailaddr);
+		if(status){ return status; }
+		free(blockBuffer);
+	}
 	//update inode, File layer tought we  write something on the disk, so it should update
 	// the disk locations into inode ---???---
 	if(length + offset > Ino->filesize)
@@ -273,22 +334,6 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		Ino->filesize = offset + length;
 	}
 	
-	/*
-	int i;
-	for(i=0; i < numBlocks; i++)
-	{
-		int fileBlockNum = writeStartBlock + i;
-
-		if( fileBlockNum < DIRECT_BK_NUM)
-		{
-			Ino->direct_bk[fileBlockNum].seg_no = tailaddr->seg_no;
-			Ino->direct_bk[fileBlockNum].bk_no = tailaddr->bk_no;
-		}
-		// else , indirect block phase 2 ---???---
-		
-	}
-	*/
-
 	time_t t;
 	time(&t);
 	Ino->access_Time = t;
@@ -355,7 +400,9 @@ int File_Drop(Inode *Ino, int offset)
 // change the size of file
 int File_Truncate(Inode *myNode, off_t offset)
 {		
-        Block_pointer *blockBuffer = NULL;
+        u_int BlockSize_byte = BLOCK_SIZE;
+
+	Block_pointer *blockBuffer = NULL;
         Block_pointer *blockPointer;
         int fileBlockNumber;
         int firstBlockToRemove, partialBlockRewrite;
@@ -398,18 +445,54 @@ int File_Truncate(Inode *myNode, off_t offset)
                         {
                                 blockPointer = &myNode->direct_bk[fileBlockNumber];
                         }
-                        
+			else
+			{
+				if(myNode->indirect_bk.seg_no == FREE_BLOCK_NUM)
+					break;
+				if(blockBuffer == NULL)
+				// if we haven't read indirect block, read them
+				{
+					blockBuffer = (Block_pointer *)calloc(1, BLOCK_SIZE);
+					LogAddress LogAdd;
+					LogAdd.seg_no = myNode->indirect_bk.seg_no;
+					LogAdd.bk_no = myNode->indirect_bk.bk_no;					
+					status = Log_Read(&LogAdd, BLOCK_SIZE, blockBuffer);
+					if(status) { return status; }
+				}
+				// change this pointer in indirect block
+				blockPointer = &blockBuffer[fileBlockNumber - DIRECT_BK_NUM];	
+			}
+
                         if( blockPointer->seg_no == FREE_BLOCK_NUM ){
                                 // just skip over unused blocks - there may be used ones later
                         }else{
 								// decrement the seg usage table
-                                //Decrement_Seg_Usage( blockPointer->seg_no, blockPointer->bk_no );
+                                Decrement_Seg_Usage( blockPointer->seg_no, blockPointer->bk_no );
                                 blockPointer->bk_no = FREE_BLOCK_NUM;
                                 blockPointer->seg_no = FREE_BLOCK_NUM;
                         }
                 }
         }
+	
+	if(blockBuffer != NULL)
+	{
+		if(myNode->indirect_bk.seg_no != FREE_BLOCK_NUM)
+			Decrement_Seg_Usage(myNode->indirect_bk.seg_no, myNode->indirect_bk.bk_no);
 
+		// if the indirect block is no logner needed, blank it out.
+		if(offset < DIRECT_BK_NUM*BlockSize_byte)
+		{
+			myNode->indirect_bk.seg_no = FREE_BLOCK_NUM;
+			myNode->indirect_bk.bk_no = FREE_BLOCK_NUM;
+		}else
+		{       
+			// push the indirect block back to the log
+			LogAddress *tailLogAddr = tail_log_addr;
+			status = Log_Write(myNode->ino, INDIRECT_BK_NUM, BlockSize_byte, blockBuffer, tailLogAddr);
+			if(status) { return status; }
+		}
+		free(blockBuffer);
+	}
         myNode->filesize = offset;
 	
         return status;
@@ -461,3 +544,28 @@ void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 		return;
 	}
 }
+
+
+int Decrement_Seg_Usage( int segment, int block)
+{
+	// if the segment is at tail of the log, then set the corresponding block
+	// to be unused
+/*	if(segment == tail_log_addr->seg_no)
+	{
+		
+	}
+	else
+	{
+		Checkpoint *CK = checkpoint;
+	       	int i;
+		while( != segment)
+		{
+			CK->seg_usage_table
+		}
+		CK->seg_usage_table->
+		Seg_usage_table *entry = CK->seg_usage_table;
+		entry->num_live_bk -= 1;
+	}
+	*/
+}
+

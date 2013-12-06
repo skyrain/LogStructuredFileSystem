@@ -11,6 +11,7 @@
 #include <time.h>
 #include "dir.h"
 
+#define ROOT_INUM 0
 Inode *ifile; //ifile stores an array of inodes
 Inode *inode_ifile; // the inode of ifile;
 int ifile_length; //number of files currently held in the ifile;
@@ -59,6 +60,36 @@ int Dir_Layer_Init(char *filename, u_int cachesize)
 	return status;
 }
 
+//get file system statistics
+/*int Dir_statfs(const char *path, struct statvfs *Statvfs)
+{
+	int status;
+	int i;
+
+	Statvfs->f_namemax = FILE_NAME_LENGTH;
+	Statvfs->f_files = ifile_length;
+
+	// count the number of inodes available
+	for (i=0; i < ifile_length; i++)
+	{
+		if(ifile[i].mode == 0 )
+		{
+			Statvfs->f_ffree ++;
+		}
+	}
+	Statvfs->f_favail = Statvfs->f_ffree;
+	
+	status = Log_statfs(&Statvfs->f_bsize, &Statvfs->f_blocks, &Statvfs->f_bfree);
+	if(status) { printf("Error when call Log_Statfs\n"); return status;}
+	
+	Statvfs->f_frsize = Statvfs->f_bsize;
+	Statvfs->f_bavail = Statvfs->f_bfree;
+	
+	return 0;
+}
+*/
+
+
 // open a directory or file
 int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 {
@@ -73,8 +104,53 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 	return status;
 }
 
+// Link a hard link of a file.
+// But we assume that the file is not exist at first, so it will create a new file.
+int Dir_Link(const char *SourcePath, const char *TargetPath)
+{
+	int status;
+	Inode *myNode;
+	//time_t t;
+	//time(&t);
+
+	if(SourcePath[0] != '/' || TargetPath[0] != '/')
+	{
+		printf("Invalid path \n");
+		return -1;
+	}
+
+	status = Get_Inode(SourcePath, &myNode);
+	if (status)
+	{
+		printf("Fail to get inode in Dir_Link \n");
+		return status;
+	}
+
+	myNode->num_links ++;
+	
+	// add the file to the approriate directory
+	status = Add_File_To_Directory(TargetPath, myNode->ino);
+	if (status)
+	{
+		printf("Fail to Add_File_To_Directory in Dir_Link \n");
+		return status;
+	}
+	
+	// Write the inode for the file to the disk.
+	status = Flush_Ino(myNode->ino);
+	if (status)     
+   	{               
+
+		printf("Fail to Add_File_To_Directory in Dir_Link \n");                		return status;  
+	}
+	
+	return status;
+}
+
+
 int Dir_GetAttr(const char *path, struct stat *stbuf)
 {
+
 	int status;
 	Inode *myNode;
 
@@ -104,7 +180,7 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	// this is for the directory other than Root
 	DirEntry currentDir[2];
     //???
-	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
+	Inode *dirNode;// = (Inode *)calloc(1,sizeof(Inode));
 	Inode *parentDirNode; //= (Inode *)calloc(1,sizeof(Inode));
 	struct fuse_file_info *fi = NULL;
 	// Create a directory and get its inode to init
@@ -167,7 +243,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 	// Check if file exists unless root
 	if (strcmp(path, "/") != 0){
-		Inode *someNode = (Inode *)calloc(1,sizeof(Inode));
+		Inode *someNode;// = (Inode *)calloc(1,sizeof(Inode));
 		status = Get_Inode(path, &someNode);
 		if (status == 0){
 			printf( "File already exists \n");
@@ -420,6 +496,7 @@ int Get_Inode(const char *path, Inode **returnNode){
 		{
 			subpath = &breakpath[1];
 		}
+	     
 	}
 
 	// returnNode has been initiated.
@@ -445,7 +522,7 @@ int Add_File_To_Directory(const char *path, int inum)
 {
 	//Add the file of this path to the directory.
 	int status;
-	Inode *dirNode = (Inode *)calloc(1,sizeof(Inode));
+	Inode *dirNode; //= (Inode *)calloc(1,sizeof(Inode));
 	DirEntry currentFile;
 	status = Get_Dir_Inode(path, &dirNode, currentFile.filename);
 	if(status)
@@ -605,7 +682,7 @@ int Write_file(Inode *myNode, const char *buf, size_t size, off_t offset)
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
     // Gets the directory that contains the file/dir specified by path
-    returnNode = (Inode **)calloc(1,sizeof(Inode *));
+    // returnNode = (Inode **)calloc(1,sizeof(Inode *));
     int status = 0;  
     char *breakpath; // holds the location of the last '/' in the subpath                              
     // find the last occurence of a /                                                                  
@@ -614,10 +691,10 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
     if (breakpath == path){                                                                            
         // This is root   
         *returnNode = &ifile[ROOT_INUM];
-        if (strlen(&path[0])> FILE_NAME_LENGTH){
+        if (strlen(&path[1])> FILE_NAME_LENGTH){
             return -EBADF; // Error bad file descriptor
         }        
-        strcpy(filename, &path[0]);                                                                
+        strcpy(filename, &path[1]);                                                                
     }else if (breakpath){             
         // Not root, make _Get_Inode do its job                                                    
         char *dirpath;   
@@ -665,7 +742,7 @@ DirEntry *Get_Dir(Inode *dirNode, int *numfiles){
 }
 
 int Get_Inode_From_Inum(int inum, Inode **returnNode){
-	// This function is provided as a courtesy to lfsck
+	//
 	if (inum < ifile_length && inum >= 0){
 		*returnNode = &ifile[inum];
 		return 0;

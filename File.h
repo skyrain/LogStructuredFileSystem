@@ -64,4 +64,6 @@ void File_Layer_Destroy();
 
 void Get_Block_pointer(Inode *inode, int ReadBlockNumber, Block_pointer *blockpointer);
 
+int Decrement_Seg_Usage(int segment, int block);
+
 #endif

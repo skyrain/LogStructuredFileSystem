@@ -18,7 +18,6 @@
 #include <fuse.h>
 
 //more need from tianyu
-#define ROOT_INUM 0
 #define UNDEFINE_FILE -2
 
 extern Inode *ifile; //ifile stores an array of inodes
@@ -37,6 +36,8 @@ int Dir_GetAttr(const char *path, struct stat *stbuf);
 
 int Dir_mkdir(const char *dirName, mode_t mode, uid_t, gid_t gid);
 
+int Dir_Link(const char *SourcePath, const char *TargetPath);
+
 int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 
 int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi);
@@ -46,6 +47,8 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi);
 int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi);
 
 void Dir_Layer_Destroy();
+
+int Dir_Statfs(const char *path, struct statvfs *Statvfs);
 
 int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename);
 
