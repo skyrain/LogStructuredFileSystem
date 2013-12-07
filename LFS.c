@@ -118,6 +118,11 @@ int LFS_GetAttr(const char *path, struct stat *stbuf)
     return status;
 }
 
+int LFS_Access(const char *path, int mask)
+{
+	return 0;
+}
+
 int LFS_ReadDir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi)
 {
     printf("ReadDir \n");
@@ -269,6 +274,7 @@ int LFS_Statfs(const char *path, struct statvfs *Statvfs)
 static struct fuse_operations LFS_oper = {
     .init = LFS_Init,
     .getattr = LFS_GetAttr,
+    .access = LFS_Access,
     .readdir = LFS_ReadDir,
     .create = LFS_Create,
     .open = LFS_Open,
