@@ -281,7 +281,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	}
 
 	// Write the inode for the new file to the disk ---???---
-	//status = Flush_Ino( inum );
+	status = Flush_Ino( inum );
 	if( status )
 	{
 		printf("ERROR when flush the inum:\n");
@@ -371,6 +371,7 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 	char name[FILE_NAME_LENGTH];
 
 	for(i = 0; i < numfiles; i++){
+		// int j = strlen(dir[i].filename);
 		strcpy(name, dir[i].filename);
 
 		// fill information into stbuf
@@ -688,7 +689,9 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
     // returnNode = (Inode **)calloc(1,sizeof(Inode *));
     int status = 0;  
     char *breakpath; // holds the location of the last '/' in the subpath                              
+   
     // find the last occurence of a /                                                                  
+    filename = (char*)calloc(8,sizeof(char));
     breakpath = strrchr( path,  '/');
 
     if (breakpath == path){                                                                            
@@ -733,6 +736,8 @@ DirEntry *Get_Dir(Inode *dirNode, int *numfiles){
 
 	DirEntry *dir;
 	dir = (DirEntry *) malloc(dirNode->filesize);
+        			struct fuse_file_info *fi){
+	// path: path of file to read
 
 	status = File_Read( dirNode, 0, dirNode->filesize, dir );
 	if( status ){
