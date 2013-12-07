@@ -550,7 +550,7 @@ int create_cache()
     cache_start->next = NULL;
 
     disk_cache = cache_start;
-
+    int i;
     for(i = 1; i < cache_seg_num; i++)
     {
         Disk_cache * tmp = (Disk_cache *)calloc(1, sizeof(Disk_cache));
