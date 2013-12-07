@@ -483,28 +483,19 @@ int Log_Create()
     {
         void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
-        Seg * ts = (Seg *)calloc(1, sizeof(Seg));
-        ts->begin_bk = n_seg_buffer + sizeof(Seg);// + sizeof(Block *);
-        memcpy(n_seg_buffer + bytes_offset, ts, sizeof(Seg));
+        Seg * ts = (Seg *)n_seg_buffer;
+        ts->begin_bk = n_seg_buffer + sizeof(Seg);
         bytes_offset += sizeof(Seg);
-        free(ts);
-
         //--------begin bk----------------------------------
-        Begin_bk * bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+        Begin_bk * bb = (Begin_bk *)(n_seg_buffer + bytes_offset);
         bb->seg_no = i;
         bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
-        memcpy(n_seg_buffer + bytes_offset, bb, sizeof(Begin_bk));
         bytes_offset += sizeof(Begin_bk);
-        free(bb);
-        
         //----seg sum bk of begin bk----------------------------
-        Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+        Seg_sum_bk * ssb = (Seg_sum_bk *)(n_seg_buffer + bytes_offset);
         ssb->bk_no = 0;
         ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
-        memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
         bytes_offset += sizeof(Seg_sum_bk);
-        free(ssb);
-       
         //---- seg sum entry of seg sum bk---------------------- 
         int j;
         for(j = 1; j < bks_per_seg; j++)
@@ -532,7 +523,8 @@ int Log_Create()
         } 
 */
         Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
-        free(n_seg_buffer); 
+        free(n_seg_buffer);
+        
     }
 
     Flash_Close(flash);
@@ -544,26 +536,28 @@ int Log_Create()
 //----initially get the first cache_seg_num into memory----------
 int create_cache()
 {
-    Disk_cache *cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
+    Disk_cache * cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
     cache_start->cache_no = 0;
     
     void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    copy_log_to_memory(1, tbuffer);
-    cache_start->seg = (Seg *)tbuffer;
+    int initial_data_seg;
+    initial_data_seg = super_seg->checkpoint_size / (bks_per_seg - 1) + 1; 
+    copy_log_to_memory(initial_data_seg, tbuffer);
+    Seg * test = (Seg *)tbuffer;
+    cache_start->seg = test;
 
     cache_start->IS_JUST_UPDATE = false;
     cache_start->next = NULL;
 
     disk_cache = cache_start;
 
-    int i;
     for(i = 1; i < cache_seg_num; i++)
     {
         Disk_cache * tmp = (Disk_cache *)calloc(1, sizeof(Disk_cache));
         tmp->cache_no = i;
         
         void * tb = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        copy_log_to_memory(i + 1, tb);
+        copy_log_to_memory(initial_data_seg + i, tb);
         cache_start->seg = (Seg *)tb;
         tmp->IS_JUST_UPDATE = false;
         tmp->next = NULL;

@@ -104,7 +104,6 @@ int main(int argc, char * argv[])
     //---------------------------------------------------------------
     //create and format flash memory & create log in memory
     Log_Create();
-
     /*
     //------------store flash memory configuration variables--------
     char* buffer = get_current_dir_name();
