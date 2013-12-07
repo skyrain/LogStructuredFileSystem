@@ -45,7 +45,7 @@ void clean_seg()
                 //-------?? 等翁旭东填写update----------------
                 //--1.注意考虑file被删除后，其inode是找不到的--
                 //--所有seg的某个bk中，找不到相应file_no的删除之--
-                //--2.设置过期的seg之seg_sum_entry的file_no, bk_no 为-1 ---
+                //--2.重置过期的seg之seg_sum_entry的file_no, bk_no 为-1 ---
 
 
                 //------?? end----------------------------
