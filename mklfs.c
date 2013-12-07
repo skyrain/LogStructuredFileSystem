@@ -104,18 +104,7 @@ int main(int argc, char * argv[])
     //---------------------------------------------------------------
     //create and format flash memory & create log in memory
     Log_Create();
-  
-	
-    //--- test ------------
-    int i;
-    for(i = 1; i < bks_per_seg; i++)
-    {
-	    void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-	    copy_log_to_memory(i, tbuffer);
-	    Seg * test = (Seg *)tbuffer;
-    }
-
-     /*
+    /*
     //------------store flash memory configuration variables--------
     char* buffer = get_current_dir_name();
     char * s = "/config.ini";

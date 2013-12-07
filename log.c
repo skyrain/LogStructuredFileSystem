@@ -479,7 +479,10 @@ int Log_Create()
     //----------------  ?? -------------------------------------------
     //----------假设 begin bk 的空间 <= 1 bk ------------------------
     //--- 所以在mklfs.c 文件中设置bks_per_seg不能太大---------------
-    for(i = 1; i < seg_num; i++)
+    
+    //---- store the data seg after cp seg------------------------
+    int seg_offset = super_seg->checkpoint_size / (bks_per_seg - 1);
+    for(i = seg_offset + 1; i < seg_num; i++)
     {
         void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
@@ -522,6 +525,7 @@ int Log_Create()
                 j * bk_size * FLASH_SECTOR_SIZE + sizeof(void *);
         } 
 */
+
         Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
         free(n_seg_buffer);
         
@@ -1037,21 +1041,33 @@ void setLogTail()
         //else turn to check next log seg's 1th bk
         else
         {
-           bool can_find_in_back = false;
-           tmp_addr->seg_no = tail_log_addr->seg_no + 1;
-           tmp_addr->bk_no = 1;
-           while(tmp_addr->seg_no < seg_num)
-           {
-               if(!is_remain_seg_not_usable(tmp_addr))
-               {
-                   locate_tail_log_addr_bk(tmp_addr);
-                   can_find_in_back = true;
-               }
-               tmp_addr->seg_no++;
-           }
+            bool can_find_in_back = false;
+            tmp_addr->seg_no = tail_log_addr->seg_no + 1;
+            tmp_addr->bk_no = 1;
+            //--- check seg_usage_table's is_checkpoint ----
+            Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+            int j = tmp_addr->seg_no;
+            while(j > 1)
+            {
+                sut_walker = sut_walker->next;
+                j--;
+            }
+            while(tmp_addr->seg_no < seg_num)
+            {
+                //--- note: add condition that the checked seg should not be--
+                //--- seg storing checkpoint---------------------------------
+                if(!is_remain_seg_not_usable(tmp_addr) 
+                        && sut_walker->is_checkpoint == false)
+                {
+                    locate_tail_log_addr_bk(tmp_addr);
+                    can_find_in_back = true;
+                    break;
+                }
+                tmp_addr->seg_no++;
+            }
 
-           if(!can_find_in_back)
-               locate_tail_log_addr_from_begin();
+            if(!can_find_in_back)
+                locate_tail_log_addr_from_begin();
         }
 
         get_log_to_memory(tail_log_addr);
