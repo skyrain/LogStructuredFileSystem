@@ -71,6 +71,14 @@ int main(int argc, char * argv[])
     seg_size = bks_per_seg * bk_size;
     seg_num = sec_num / bk_size / bks_per_seg;
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;
+    
+    if(seg_num < 16)
+    {
+        printf("Should be more than 16 segments!\n");
+        return 0;
+    }
+
+
 
     if(sec_num % FLASH_SECTORS_PER_BLOCK != 0)
     {
