@@ -8,10 +8,8 @@
 
 
 
-//---- seg_usage_table 加上is_free 属性,初始化为true-------
-//-- get_log_to_memory 改该属性为false--------
-//-- setLogTail时tail_log_addr一旦换到另一个seg，那seg必须是is_free = true--
-//-- Log_Free(),设置free出来的seg该属性为true
+//-- setLogTail时,tail_log_addr 指向的bk 不仅要< wearlimit & not for cp--
+//-- 而且其对应的seg_sum_entry->file_no 应 == -1 ---
 
 /*
  *
@@ -1175,7 +1173,7 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
             buffer, bk_size * FLASH_SECTOR_SIZE);
 
     Seg_sum_entry * sse_walker = seg_in_memory->begin_bk->ssum_bk->seg_sum_entry;
-    //----change the seg_in_memory's Begin_bk---------
+    //----change the seg_in_memory's Begin_bk's seg_sum_entry---------
     while(sse_walker != NULL)
     {
         if(log_addr->bk_no == sse_walker->bk_no)
@@ -1233,7 +1231,7 @@ int Log_Write(int inum, int block, u_int length,
 //--------- in unit of  16  sectors-------------------------
 int Log_Free(int seg_no)
 {
-    //----1. move live bks to other segs -----------------
+/*    //----1. move live bks to other segs -----------------
     
     //----2. free this seg ------------------------------
 
@@ -1254,7 +1252,7 @@ int Log_Free(int seg_no)
     Flash   flash = Flash_Open(fl_file, flags, blocks);
     Flash_Erase(flash, offset, erase_bks);
     Flash_Close(flash);
-
+*/
     return 0;
 }
 
