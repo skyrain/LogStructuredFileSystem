@@ -6,6 +6,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+
+
+//---- seg_usage_table 加上is_free 属性,初始化为true-------
+//-- get_log_to_memory 改该属性为false--------
+//-- setLogTail时tail_log_addr一旦换到另一个seg，那seg必须是is_free = true--
+//-- Log_Free(),设置free出来的seg该属性为true
+
 /*
  *
  *?? means not for sure or need improve in future
@@ -1222,11 +1229,13 @@ int Log_Write(int inum, int block, u_int length,
 }
 
 
-//-------- erase blocks-----------------------------
+//-------- erase seg for cleaning mechanism--------------------
 //--------- in unit of  16  sectors-------------------------
-//-------input: log_addr can only at 16 whole number location------
-int Log_Free(LogAddress * log_addr, u_int length)
+int Log_Free(int seg_no)
 {
+    //----1. move live bks to other segs -----------------
+    
+    //----2. free this seg ------------------------------
 
     u_int erase_bks = 0;
     while(erase_bks * FLASH_SECTORS_PER_BLOCK * FLASH_SECTOR_SIZE <= length)
