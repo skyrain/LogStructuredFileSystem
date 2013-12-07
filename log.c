@@ -6,7 +6,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-// --  see ?
+
+
+//---- seg_usage_table 加上is_free 属性,初始化为true-------
+//-- get_log_to_memory 改该属性为false--------
+//-- setLogTail时tail_log_addr一旦换到另一个seg，那seg必须是is_free = true--
+//-- Log_Free(),设置free出来的seg该属性为true
+
 /*
  *
  *?? means not for sure or need improve in future
@@ -480,34 +486,26 @@ int Log_Create()
     //----------------  ?? -------------------------------------------
     //----------假设 begin bk 的空间 <= 1 bk ------------------------
     //--- 所以在mklfs.c 文件中设置bks_per_seg不能太大---------------
-    for(i = 1; i < seg_num; i++)
+    
+    //---- store the data seg after cp seg------------------------
+    int seg_offset = super_seg->checkpoint_size / (bks_per_seg - 1);
+    for(i = seg_offset + 1; i < seg_num; i++)
     {
         void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
-        Seg * ts = (Seg *)calloc(1, sizeof(Seg));
-        ts->begin_bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *);
-        memcpy(n_seg_buffer + bytes_offset, ts, sizeof(Seg));
+        Seg * ts = (Seg *)n_seg_buffer;
+        ts->begin_bk = n_seg_buffer + sizeof(Seg);
         bytes_offset += sizeof(Seg);
-        free(ts);
-
         //--------begin bk----------------------------------
-        Begin_bk * bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+        Begin_bk * bb = (Begin_bk *)(n_seg_buffer + bytes_offset);
         bb->seg_no = i;
-        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(int)
-            + sizeof(Seg_sum_bk *);
-        memcpy(n_seg_buffer + bytes_offset, bb, sizeof(Begin_bk));
+        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
         bytes_offset += sizeof(Begin_bk);
-        free(bb);
-        
         //----seg sum bk of begin bk----------------------------
-        Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+        Seg_sum_bk * ssb = (Seg_sum_bk *)(n_seg_buffer + bytes_offset);
         ssb->bk_no = 0;
-        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(int)
-            + sizeof(Seg_sum_entry *);
-        memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
+        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
         bytes_offset += sizeof(Seg_sum_bk);
-        free(ssb);
-       
         //---- seg sum entry of seg sum bk---------------------- 
         int j;
         for(j = 1; j < bks_per_seg; j++)
@@ -534,8 +532,10 @@ int Log_Create()
                 j * bk_size * FLASH_SECTOR_SIZE + sizeof(void *);
         } 
 */
+
         Flash_Write(flash, seg_size * i, seg_size, n_seg_buffer); 
-        free(n_seg_buffer); 
+        free(n_seg_buffer);
+        
     }
 
     Flash_Close(flash);
@@ -547,18 +547,20 @@ int Log_Create()
 //----initially get the first cache_seg_num into memory----------
 int create_cache()
 {
-    Disk_cache *cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
+    Disk_cache * cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
     cache_start->cache_no = 0;
     
     void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    copy_log_to_memory(1, tbuffer);
-    cache_start->seg = (Seg *)tbuffer;
+    int initial_data_seg;
+    initial_data_seg = super_seg->checkpoint_size / (bks_per_seg - 1) + 1; 
+    copy_log_to_memory(initial_data_seg, tbuffer);
+    Seg * test = (Seg *)tbuffer;
+    cache_start->seg = test;
 
     cache_start->IS_JUST_UPDATE = false;
     cache_start->next = NULL;
 
     disk_cache = cache_start;
-
     int i;
     for(i = 1; i < cache_seg_num; i++)
     {
@@ -566,7 +568,7 @@ int create_cache()
         tmp->cache_no = i;
         
         void * tb = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        copy_log_to_memory(i + 1, tb);
+        copy_log_to_memory(initial_data_seg + i, tb);
         cache_start->seg = (Seg *)tb;
         tmp->IS_JUST_UPDATE = false;
         tmp->next = NULL;
@@ -620,14 +622,14 @@ bool read_cache(LogAddress * log_addr, u_int length, void * buffer)
             if(bks_tobe_read <= bks_remain)
             {
                 //write data smaller than data size of bks_remain
-                memcpy(buffer + offset, cache_walker->seg->begin_bk
+                memcpy(buffer + offset, cache_walker->seg
                         + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, length);
                 IS_IN_CACHE = true;
                 break;
             }
             else
             {
-                memcpy(buffer + offset, cache_walker->seg->begin_bk
+                memcpy(buffer + offset, cache_walker->seg
                         + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE,
                         bks_remain * bk_size * FLASH_SECTOR_SIZE);
                 offset += bks_remain * bk_size * FLASH_SECTOR_SIZE;
@@ -826,20 +828,23 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
     //--------reconstruct the normal segment to memory from disk----------    
     u_int bytes_offset = 0;
     Seg* tseg = (Seg *)buffer;
-    tseg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+    bytes_offset += sizeof(Seg);
+    tseg->begin_bk = (Begin_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Begin_bk));
     tseg->begin_bk->seg_no = seg_no;
-    tseg->begin_bk->ssum_bk =
-        (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+    bytes_offset += sizeof(Begin_bk);
+    tseg->begin_bk->ssum_bk = (Seg_sum_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_bk));
     
-    bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
+    //bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
     tseg->begin_bk->ssum_bk->bk_no = 0;
     bytes_offset += sizeof(Seg_sum_bk);
     
-    Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_entry));
     tseg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
- 
+    bytes_offset += sizeof(Seg_sum_entry);
+    sse_walker->next = buffer + bytes_offset;
+    sse_walker = sse_walker->next;
     int i;
-    for(i = 1; i < bks_per_seg; i++)
+    for(i = 2; i < bks_per_seg; i++)
     {
         Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
         
@@ -850,8 +855,6 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
             sse->next = NULL;
 
         memcpy(sse_walker, sse, sizeof(Seg_sum_entry));
-//--?? 可能memory leak----------
-//         sse_walker = sse;
         sse_walker = sse_walker->next;
     }
 
@@ -878,6 +881,40 @@ void get_log_to_memory(LogAddress * log_addr)
     if(seg_in_memory != NULL)
         free(seg_in_memory);
     
+    //--------reconstruct the normal segment to memory from disk----------    
+    u_int bytes_offset = 0;
+    seg_in_memory = (Seg *)buffer;
+    bytes_offset += sizeof(Seg);
+    seg_in_memory->begin_bk = (Begin_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Begin_bk));
+    seg_in_memory->begin_bk->seg_no = log_addr->seg_no;
+    bytes_offset += sizeof(Begin_bk);
+    seg_in_memory->begin_bk->ssum_bk = (Seg_sum_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_bk));
+    
+    //bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
+    seg_in_memory->begin_bk->ssum_bk->bk_no = 0;
+    bytes_offset += sizeof(Seg_sum_bk);
+    
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_entry));
+    seg_in_memory->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
+    bytes_offset += sizeof(Seg_sum_entry);
+    sse_walker->next = buffer + bytes_offset;
+    sse_walker = sse_walker->next;
+    int i;
+    for(i = 2; i < bks_per_seg; i++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
+        
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = buffer + bytes_offset;
+        else
+            sse->next = NULL;
+
+        memcpy(sse_walker, sse, sizeof(Seg_sum_entry));
+        sse_walker = sse_walker->next;
+    }
+
+/*
     //--------reconstruct the segment to memory from disk-------------    
     u_int bytes_offset = 0;
     seg_in_memory = (Seg *)buffer;
@@ -909,7 +946,7 @@ void get_log_to_memory(LogAddress * log_addr)
 //         sse_walker = sse;
         sse_walker = sse_walker->next;
     }
-
+    */
 }
 
 void get_slog_to_memory()
@@ -1043,21 +1080,33 @@ void setLogTail()
         //else turn to check next log seg's 1th bk
         else
         {
-           bool can_find_in_back = false;
-           tmp_addr->seg_no = tail_log_addr->seg_no + 1;
-           tmp_addr->bk_no = 1;
-           while(tmp_addr->seg_no < seg_num)
-           {
-               if(!is_remain_seg_not_usable(tmp_addr))
-               {
-                   locate_tail_log_addr_bk(tmp_addr);
-                   can_find_in_back = true;
-               }
-               tmp_addr->seg_no++;
-           }
+            bool can_find_in_back = false;
+            tmp_addr->seg_no = tail_log_addr->seg_no + 1;
+            tmp_addr->bk_no = 1;
+            //--- check seg_usage_table's is_checkpoint ----
+            Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+            int j = tmp_addr->seg_no;
+            while(j > 1)
+            {
+                sut_walker = sut_walker->next;
+                j--;
+            }
+            while(tmp_addr->seg_no < seg_num)
+            {
+                //--- note: add condition that the checked seg should not be--
+                //--- seg storing checkpoint---------------------------------
+                if(!is_remain_seg_not_usable(tmp_addr) 
+                        && sut_walker->is_checkpoint == false)
+                {
+                    locate_tail_log_addr_bk(tmp_addr);
+                    can_find_in_back = true;
+                    break;
+                }
+                tmp_addr->seg_no++;
+            }
 
-           if(!can_find_in_back)
-               locate_tail_log_addr_from_begin();
+            if(!can_find_in_back)
+                locate_tail_log_addr_from_begin();
         }
 
         get_log_to_memory(tail_log_addr);
@@ -1140,6 +1189,8 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
     }
 
     //-------update seg usage table------------------
+    //--- 这一步在cleanning mechanism 的时候再做----
+/*
     int i;
     Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
     for(i = 0; i < seg_num; i++)
@@ -1152,6 +1203,7 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
             break;
         }
     }
+    */
 }
 
 //------------------------------------------------------------------
@@ -1177,11 +1229,13 @@ int Log_Write(int inum, int block, u_int length,
 }
 
 
-//-------- erase blocks-----------------------------
+//-------- erase seg for cleaning mechanism--------------------
 //--------- in unit of  16  sectors-------------------------
-//-------input: log_addr can only at 16 whole number location------
-int Log_Free(LogAddress * log_addr, u_int length)
+int Log_Free(int seg_no)
 {
+    //----1. move live bks to other segs -----------------
+    
+    //----2. free this seg ------------------------------
 
     u_int erase_bks = 0;
     while(erase_bks * FLASH_SECTORS_PER_BLOCK * FLASH_SECTOR_SIZE <= length)

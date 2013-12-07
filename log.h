@@ -298,9 +298,8 @@ int Log_Write(int inum, int block, u_int length,
          void * buffer, LogAddress * log_addr);
 
 //--------------------------------------------------------------------
-//释放log中从logAddress开始长度为length的数据,
-//--free 最小blocks数 which cover the length
-int Log_Free(LogAddress * log_addr, u_int length);
+//--- erase seg for cleaning mechanism ------------------------------
+int Log_Free(int seg_no);
 
 
 

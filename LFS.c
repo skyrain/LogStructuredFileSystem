@@ -400,8 +400,6 @@ int main(int argc, char *argv[])
 
     get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------
-
-
     //------------- create cache once the whole system ----------
     //---------- starts to run------------------------------------
     create_cache();
