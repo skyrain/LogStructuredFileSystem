@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-// --  see ?
 /*
  *
  *?? means not for sure or need improve in future
@@ -485,7 +484,7 @@ int Log_Create()
         void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         bytes_offset = 0;
         Seg * ts = (Seg *)calloc(1, sizeof(Seg));
-        ts->begin_bk = n_seg_buffer + sizeof(Begin_bk *) + sizeof(Block *);
+        ts->begin_bk = n_seg_buffer + sizeof(Seg);// + sizeof(Block *);
         memcpy(n_seg_buffer + bytes_offset, ts, sizeof(Seg));
         bytes_offset += sizeof(Seg);
         free(ts);
@@ -493,8 +492,7 @@ int Log_Create()
         //--------begin bk----------------------------------
         Begin_bk * bb = (Begin_bk *)calloc(1, sizeof(Begin_bk));
         bb->seg_no = i;
-        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(int)
-            + sizeof(Seg_sum_bk *);
+        bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
         memcpy(n_seg_buffer + bytes_offset, bb, sizeof(Begin_bk));
         bytes_offset += sizeof(Begin_bk);
         free(bb);
@@ -502,8 +500,7 @@ int Log_Create()
         //----seg sum bk of begin bk----------------------------
         Seg_sum_bk * ssb = (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
         ssb->bk_no = 0;
-        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(int)
-            + sizeof(Seg_sum_entry *);
+        ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
         memcpy(n_seg_buffer + bytes_offset, ssb, sizeof(Seg_sum_bk));
         bytes_offset += sizeof(Seg_sum_bk);
         free(ssb);
@@ -826,20 +823,23 @@ void copy_log_to_memory(int seg_no, void * copy_seg)
     //--------reconstruct the normal segment to memory from disk----------    
     u_int bytes_offset = 0;
     Seg* tseg = (Seg *)buffer;
-    tseg->begin_bk = (Begin_bk *)calloc(1, sizeof(Begin_bk));
+    bytes_offset += sizeof(Seg);
+    tseg->begin_bk = (Begin_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Begin_bk));
     tseg->begin_bk->seg_no = seg_no;
-    tseg->begin_bk->ssum_bk =
-        (Seg_sum_bk *)calloc(1, sizeof(Seg_sum_bk));
+    bytes_offset += sizeof(Begin_bk);
+    tseg->begin_bk->ssum_bk = (Seg_sum_bk *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_bk));
     
-    bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
+    //bytes_offset += sizeof(Seg) + sizeof(Begin_bk);
     tseg->begin_bk->ssum_bk->bk_no = 0;
     bytes_offset += sizeof(Seg_sum_bk);
     
-    Seg_sum_entry * sse_walker = (Seg_sum_entry *)calloc(1, sizeof(Seg_sum_entry));
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)(buffer + bytes_offset);//calloc(1, sizeof(Seg_sum_entry));
     tseg->begin_bk->ssum_bk->seg_sum_entry = sse_walker;
- 
+    bytes_offset += sizeof(Seg_sum_entry);
+    sse_walker->next = buffer + bytes_offset;
+    sse_walker = sse_walker->next;
     int i;
-    for(i = 1; i < bks_per_seg; i++)
+    for(i = 2; i < bks_per_seg; i++)
     {
         Seg_sum_entry * sse = (Seg_sum_entry *)(buffer + bytes_offset);
         
