@@ -216,7 +216,21 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	currentDir[0].inum = dirNode->ino;
 	
 	// create the new directory.
-	status = File_Write(dirNode, 0, 2*sizeof(DirEntry), &currentDir);
+	
+	int offset = dirNode->filesize;
+	status = File_Write(dirNode, offset, 2*sizeof(DirEntry), &currentDir);
+		
+	
+
+	// ? test file write
+	void *tempbuffer = calloc(1,dirNode->filesize);
+	File_Read(dirNode,0,dirNode->filesize, tempbuffer);
+	char * t1 = (char *)tempbuffer;
+	char * t2 = (char *)(tempbuffer + 12);
+	char * t3 = (char *)(tempbuffer + 24);
+
+
+
 	if(status)
 	{
 		printf("create with error");
@@ -736,7 +750,6 @@ DirEntry *Get_Dir(Inode *dirNode, int *numfiles){
 
 	DirEntry *dir;
 	dir = (DirEntry *) malloc(dirNode->filesize);
-        			struct fuse_file_info *fi){
 	// path: path of file to read
 
 	status = File_Read( dirNode, 0, dirNode->filesize, dir );

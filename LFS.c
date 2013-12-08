@@ -66,7 +66,7 @@ extern u_int bk_content_size;
 //--------default :4 ------------------
 //------chosen by user----------------
 extern u_int cache_seg_num;
-
+extern u_int written_seg_num;
 //**************************************************************
 
 
@@ -402,7 +402,8 @@ int main(int argc, char *argv[])
     //-------------------------------------------------------------
     //------------- create cache once the whole system ----------
     //---------- starts to run------------------------------------
-    create_cache();
+//    create_cache();
+     written_seg_num = 0;     
 
 #define NARGS 3
     int nargc = 2 + NARGS;

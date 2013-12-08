@@ -246,6 +246,7 @@ u_int bk_content_size;
 //------chosen by user----------------
 u_int cache_seg_num;   
 
+u_int written_seg_num;
 //-------------------------------------------------------------
 
 

@@ -112,8 +112,8 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 		//read block by block to the ReadBuffer;
 		//get one of the four direct block from the Inode. and cpy to the Block_pointer
 		Get_Block_pointer(Ino, ReadBlockNumber, &blockPointer);
-		LogAddr.seg_no = blockPointer.bk_no;
-		LogAddr.bk_no = blockPointer.seg_no;
+		LogAddr.seg_no = blockPointer.seg_no;
+		LogAddr.bk_no = blockPointer.bk_no;
 		if(blockPointer.seg_no != FREE_BLOCK_NUM && blockPointer.bk_no != FREE_BLOCK_NUM)
 		{
 			status = Log_Read(&LogAddr, BlockSize_byte, ReadPointer);// if read more than one segment, I cant read if the segment is the last segment in log
@@ -281,7 +281,7 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 		//Get_Block_pointer(Ino, writeBlock, &blockPointer);
 	
-	
+	// ?? log_write 判断每次写是否在同一个block.
 	for( writeBlock = 0; writeBlock < numBlocks; writeBlock ++)
 	{
 		int fileBlockNumber = writeStartBlock + writeBlock;

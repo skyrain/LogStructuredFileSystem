@@ -742,6 +742,8 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
     //----------2. store on cache-----------------
     //-------------2.1 check whether all are just updated----
     //---if all yes, set each's IS_JUST_UPDATE = false;
+    
+    //-------?? 此处IS_JUST_UPDATE 没用 ----------------
     for(i = 0; i < segs_tobe_read; i++)
     {
         bool ALL_UPDATED = true;
@@ -1140,47 +1142,89 @@ void setLogTail()
     free(tmp_addr);
 }
 
+void update_cache(int seg_no)
+{
+	Disk_cache * c_walker = disk_cache;
+	while(c_walker != NULL)
+	{
+		if(c_walker->seg->begin_bk->seg_no == seg_no)
+		{
+			void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+			copy_log_to_memory(seg_no, tbuffer);
+			free(c_walker->seg);
+			c_walker->seg = (Seg *)tbuffer;
+			break;
+		}
+		c_walker = c_walker->next;
+	}
+}
+
 //---------once tail_log_addr reaches certain log seg's end--------
 //-------- push that log seg data into disk------------------------
 //---------call this func before setLogTail()-------------------
 void pushToDisk(LogAddress * log_addr)
 {
-    //If reaches certain log seg's end, write entire log seg to disk
-    if(is_remain_seg_not_usable(log_addr))
-    {
-        //1.write to disk
-        //choose the model of Flash
-        Flash_Flags flags = FLASH_SILENT;
+	//If reaches certain log seg's end, write entire log seg to disk
+	if(is_remain_seg_not_usable(log_addr))
+	{
+		//1.write to disk
+		//choose the model of Flash
+		Flash_Flags flags = FLASH_SILENT;
 
-        //blocks : # of blocks in the flash
-        u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
-        u_int * blocks = &tmp;
-        Flash   flash = Flash_Open(fl_file, flags, blocks);
-        Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
-                seg_size, seg_in_memory);
+		//blocks : # of blocks in the flash
+		u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+		u_int * blocks = &tmp;
+		Flash   flash = Flash_Open(fl_file, flags, blocks);
+		Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
+				seg_size, seg_in_memory);
 
-        //----update the seg_usage_table--------------
-        Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
-        int i = log_addr->seg_no;
-        while(i > 1)
-        {
-            sut_walker = sut_walker->next;
-            i--;
-        }
-        time_t t;
-        time(&t);
-        sut_walker->modify_time = t;
-
-
-//---??need solved with Inode info------------------------
-        //----------怎麽确定 num_live_bk ???----------------
-        //--- 感觉要结合 seg_sum_entry 的file bk和inode 得到真实的num_live_bk-
-        sut_walker->num_live_bk = bks_per_seg;
+		//----update the seg_usage_table--------------
+		Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+		int i = log_addr->seg_no;
+		while(i > 1)
+		{
+			sut_walker = sut_walker->next;
+			i--;
+		}
+		time_t t;
+		time(&t);
+		sut_walker->modify_time = t;
 
 
+		//---??need solved with Inode info------------------------
+		//----------怎麽确定 num_live_bk ???----------------
+		//--- 感觉要结合 seg_sum_entry 的file bk和inode 得到真实的num_live_bk-
+		//        sut_walker->num_live_bk = bks_per_seg;
+		Flash_Close(flash);
 
-        Flash_Close(flash);
-    }
+		//--- for cache seg initialization--------------
+		if(written_seg_num != cache_seg_num)
+		{
+			written_seg_num ++;
+			if(written_seg_num == cache_seg_num)
+				create_cache();
+		}
+		//--- update cache if the written seg previously is in cache ---
+		update_cache(log_addr->seg_no);	
+	}
+	//---- else if seg_in_memory is already in cache ------------------
+	//---- memcpy seg_in_memory to seg of that cache ----------------  
+	else
+	{
+		Disk_cache * c_walker = disk_cache;
+		while(c_walker != NULL)
+		{
+			if(c_walker->seg->begin_bk->seg_no == log_addr->seg_no)
+			{
+				memset(c_walker->seg, 0, seg_size * FLASH_SECTOR_SIZE);
+				void * tb = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+			 	memcpy(tb, seg_in_memory, seg_size * FLASH_SECTOR_SIZE);
+				c_walker->seg = (Seg *)tb;
+				break;	
+			}
+			c_walker = c_walker->next;
+		}
+	}
 }
 
 //-------------------write data log's one block---------------
