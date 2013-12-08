@@ -20,6 +20,7 @@ void clean_seg()
         int i;
 
         //--- update seg_usage_table's num_live_bk attribute-----------
+        //--- & update each seg's seg_sum_entry -----------------------
         for(i = 1; i < seg_num; i++)
         {
             //---scan segs which store data(not checkpoint seg),--------
@@ -39,13 +40,13 @@ void clean_seg()
                 copy_log_to_memory(i, tbuffer);
                 Seg * tseg = (Seg *)tbuffer;
 
-                //--- update tseg's seg_usage_table according to---
+                //---1.update tseg's seg_usage_table according to---
                 //-- tseg's seg_sum_entry & all the inode info-----
 
                 //-------?? 等翁旭东填写update----------------
-                //--1.注意考虑file被删除后，其inode是找不到的--
+                //--2.注意考虑file被删除后，其inode是找不到的--
                 //--所有seg的某个bk中，找不到相应file_no的删除之--
-                //--2.重置过期的seg之seg_sum_entry的file_no, bk_no 为-1 ---
+                //--3.重置过期的seg之seg_sum_entry的file_no, bk_no 为-1 ---
 
 
                 //------?? end----------------------------
