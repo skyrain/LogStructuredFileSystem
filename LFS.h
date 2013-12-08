@@ -11,6 +11,7 @@
 void *LFS_Init(struct fuse_conn_info *conn);
 
 int LFS_GetAttr(const char *path, struct stat *stbuf);
+int LFS_Access(const char *path, int mask);
 int LFS_ReadDir(const char *path, void *buf, fuse_fill_dir_t fill, off_t offset, struct fuse_file_info *fi);
 int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi);
 
