@@ -39,7 +39,40 @@ void clean_seg()
                 void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
                 copy_log_to_memory(i, tbuffer);
                 Seg * tseg = (Seg *)tbuffer;
-
+                
+                // Initial the temp parameter for segment summery entry
+				int status = 0;
+				int NumLiveBlock = 0;
+				//ifile = (Inode *)calloc(1, inode_ifile->filesize);
+				//status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
+				
+				Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum__bk->Seg_sum_entry;
+				
+				int inum;
+				int file_bk; 
+				int i;
+				
+				for(i = 0; i < bks_per_seg; i++){
+					inum = SegSumEntry->file_no; 
+					file_bk = SegSemEntry->file_bk_no;
+					
+					if(SegSumEntry->bk_no == ifile[inum].direct_bk[file_bk].bk_no)
+					{
+					    	NumLiveBlock ++;
+					}
+					else
+					{
+							SegSumEntry->bk_no = FREE_BLOCK_NUM;
+							SegSumEntry->file_no = FREE_BLOCK_NUM;
+					}
+					
+					// link to the next block in this segment
+					SegSumEntry = SegSumEntry->next;
+				}
+				
+				// update the number of live blocks
+			    sut_walker->num_live_bk = num_live_bk;
+			    
                 //---1.update tseg's seg_usage_table according to---
                 //-- tseg's seg_sum_entry & all the inode info-----
 
