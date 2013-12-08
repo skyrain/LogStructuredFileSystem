@@ -222,13 +222,14 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 		
 	
 
-	// ? test file write
+/*	
+// ? test file write
 	void *tempbuffer = calloc(1,dirNode->filesize);
 	File_Read(dirNode,0,dirNode->filesize, tempbuffer);
 	char * t1 = (char *)tempbuffer;
 	char * t2 = (char *)(tempbuffer + 12);
 	char * t3 = (char *)(tempbuffer + 24);
-
+*/
 
 
 	if(status)
@@ -714,7 +715,7 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
         if (strlen(&path[1])> FILE_NAME_LENGTH){
             return -EBADF; // Error bad file descriptor
         }        
-        strcpy(filename, &path[1]);                                                                
+        strcpy(filename, &path[0]);                                                                
     }else if (breakpath){             
         // Not root, make _Get_Inode do its job                                                    
         char *dirpath;   
