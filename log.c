@@ -970,6 +970,27 @@ void get_slog_to_memory()
     }
 }
 
+//-- check whether bk is pointed by certain file bk or not ---
+//------------------ 用途 --------------------------------------------
+//-- setLogTail时,tail_log_addr 指向的bk 不仅要< wearlimit & not for cp--
+//-- 而且其对应的seg_sum_entry->file_no 应 == -1 ---
+bool is_bk_in_use(LogAddress * log_addr)
+{
+    void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    copy_log_to_memory(log_addr->seg_no, tbuffer);
+    Seg * tseg = (Seg *)tbuffer;
+    
+    Seg_sum_entry * sse_walker = tseg->begin_bk->ssum_bk->seg_sum_entry;
+    while(sse_walker->bk_no != log_addr->bk_no)
+        sse_walker = sse_walker->next;
+
+    bool in_use = false;
+    if(sse_walker->file_no != -1)
+        in_use = true;
+
+    return in_use;
+}
+
 //--- given log addr, check whether this addr is the last addr---
 //-- within that seg that is <= wearlimit and empty--------------
 bool is_remain_seg_not_usable(LogAddress * log_addr)
@@ -1058,26 +1079,6 @@ void locate_tail_log_addr_from_begin()
 
 
 
-//-- check whether bk is pointed by certain file bk or not ---
-//------------------ 用途 --------------------------------------------
-//-- setLogTail时,tail_log_addr 指向的bk 不仅要< wearlimit & not for cp--
-//-- 而且其对应的seg_sum_entry->file_no 应 == -1 ---
-bool is_bk_in_use(LogAddress * log_addr)
-{
-    void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    copy_log_to_memory(log_addr->seg_no, tbuffer);
-    Seg * tseg = (Seg *)tbuffer;
-    
-    Seg_sum_entry * sse_walker = tseg->begin_bk->ssum_bk->seg_sum_entry;
-    while(sse_walker->bk_no != log_addr->bk_no)
-        sse_walker = sse_walker->next;
-
-    bool in_use = false;
-    if(sse_walker->file_no != -1)
-        in_use = true;
-
-    return in_use;
-}
 
 //--------  find the next bk < wearlimit and available--------
 //-------------assist func for log write-------------------------
