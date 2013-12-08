@@ -46,7 +46,7 @@ void clean_seg()
 				//ifile = (Inode *)calloc(1, inode_ifile->filesize);
 				//status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
 				
-		Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum__bk->Seg_sum_entry;
+		Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum_bk->Seg_sum_entry;
 				
 		int inum;
 		int file_bk; 
