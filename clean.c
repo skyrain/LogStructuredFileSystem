@@ -10,6 +10,15 @@
 //--- decrease in pushToDisk() -----------------------------
 int available_seg_num;
 
+
+
+
+//------- put funcs in dir.c -------------------
+//----------------------------------------------
+//-----------------------------=-----------------
+
+
+
 //-------prerequisite: know the log_addr->seg_no has good bk to be used-----
 //--- find available bk includes log_addr->bk itself-----------------------
 void locate_log_addr_bk(LogAddress * log_addr, LogAddress * c_log_addr)
@@ -211,6 +220,41 @@ int Log_Free(int seg_no)
     u_int offset = (seg_size / FLASH_SECTORS_PER_BLOCK) * seg_no; 
     u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
     Flash_Erase(flash, offset, erase_bks);
+    //--- reconstruct the seg structure -----------------
+    void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    bytes_offset = 0;
+    Seg * ts = (Seg *)n_seg_buffer;
+    ts->begin_bk = n_seg_buffer + sizeof(Seg);
+    bytes_offset += sizeof(Seg);
+    //--------begin bk----------------------------------
+    Begin_bk * bb = (Begin_bk *)(n_seg_buffer + bytes_offset);
+    bb->seg_no = i;
+    bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
+    bytes_offset += sizeof(Begin_bk);
+    //----seg sum bk of begin bk----------------------------
+    Seg_sum_bk * ssb = (Seg_sum_bk *)(n_seg_buffer + bytes_offset);
+    ssb->bk_no = 0;
+    ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
+    bytes_offset += sizeof(Seg_sum_bk);
+    //---- seg sum entry of seg sum bk---------------------- 
+    int j;
+    for(j = 1; j < bks_per_seg; j++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(n_seg_buffer
+                + bytes_offset);
+        sse->bk_no = j;
+        sse->file_no = -1;
+        sse->file_bk_no = -1;
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = n_seg_buffer + bytes_offset;
+        else
+            sse->next = NULL;
+    }
+
+    Flash_Write(flash, seg_size * seg_no, seg_size, n_seg_buffer);
+    free(n_seg_buffer);
+
     Flash_Close(flash);
 
     return 0;
