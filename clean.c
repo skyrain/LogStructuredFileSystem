@@ -71,7 +71,7 @@ void clean_seg()
 				}
 				
 				// update the number of live blocks
-			    sut_walker->num_live_bk = num_live_bk;
+				sut_walker->num_live_bk = num_live_bk;
 			    
                 //---1.update tseg's seg_usage_table according to---
                 //-- tseg's seg_sum_entry & all the inode info-----
