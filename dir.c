@@ -704,18 +704,27 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
     // returnNode = (Inode **)calloc(1,sizeof(Inode *));
     int status = 0;  
     char *breakpath; // holds the location of the last '/' in the subpath                              
-   
-    // find the last occurence of a /                                                                  
-    filename = (char*)calloc(8,sizeof(char));
+    // find the last occurence of a /
+    //filename = (char*)calloc(8,sizeof(char));
+    
     breakpath = strrchr( path,  '/');
 
-    if (breakpath == path){                                                                            
+    if (breakpath == path){                          
         // This is root   
         *returnNode = &ifile[ROOT_INUM];
+
         if (strlen(&path[1])> FILE_NAME_LENGTH){
             return -EBADF; // Error bad file descriptor
-        }        
-        strcpy(filename, &path[0]);                                                                
+        }
+    
+    if( strcmp(breakpath, path) == 0 )
+    {
+        strcpy(filename, &path[0]);
+    }
+    else
+    {
+	strcpy(filename, &path[1]);
+    }
     }else if (breakpath){             
         // Not root, make _Get_Inode do its job                                                    
         char *dirpath;   
