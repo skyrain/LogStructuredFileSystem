@@ -271,6 +271,30 @@ int LFS_Statfs(const char *path, struct statvfs *Statvfs)
 	return Dir_Statfs(path, Statvfs);
 }
 
+int LFS_Flush(const char *path, struct fuse_file_info *fi)
+{	
+	printf("LFS is flushing Possibly flush cached data \n");
+	return 0;
+}
+
+int LFS_Chmod(const char *path, mode_t mode)
+{
+	printf("Change the permission bits of a file \n");
+	return 0;
+}
+
+int LFS_Chown(const char *path, uid_t uid, gid_t gid)
+{
+	printf("Change the owner and group of a file \n");
+	return 0;
+}
+
+int LFS_Utimens(const char *path, const struct timespec ts[2])
+{
+	printf("Change the access and modification times of a file with nanosecond resolution \n");
+	return 0;
+}
+
 static struct fuse_operations LFS_oper = {
     .init = LFS_Init,
     .getattr = LFS_GetAttr,
@@ -291,6 +315,10 @@ static struct fuse_operations LFS_oper = {
     .rename = LFS_Rename,
     .destroy = LFS_Destroy,
     .statfs = LFS_Statfs,
+    .flush = LFS_Flush,
+    .chmod = LFS_Chmod,
+    .chown = LFS_Chown,
+    .utimens = LFS_Utimens,
 };
 
 

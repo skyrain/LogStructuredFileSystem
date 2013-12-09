@@ -29,5 +29,10 @@ int LFS_rmdir(const char *path);
 int LFS_Rename(const char *frompath, const char *topath);
 void LFS_Destroy();
 int LFS_statfs(const char *path, struct statvfs *Statvfs);
+int LFS_Flush(const char *path, struct fuse_file_info *fi);
+int LFS_Chmod(const char *path, mode_t mode);
+int LFS_Chown(const char *path, uid_t uid, gid_t gid);
+int LFS_Utimens(const char *path, const struct timespec ts[2]);
+
 
 #endif
