@@ -44,7 +44,8 @@ int File_Init(Inode *Ino, int type)
         Ino->change_Time = t;  
         Ino->create_Time = t;  
         Ino->modify_Time = t;  
- 
+	//Ino->mode = 0;	
+
 	//some problem with the indirect and direct block structure
 	Ino->indirect_bk.seg_no = FREE_BLOCK_NUM;
 	Ino->indirect_bk.bk_no = FREE_BLOCK_NUM;

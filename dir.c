@@ -155,11 +155,32 @@ int Dir_GetAttr(const char *path, struct stat *stbuf)
 {
 
 	int status;
-	Inode *myNode;
+	Inode *myNode = (Inode *)calloc(1,sizeof(Inode));
+	
+	// set the right attribute to the file or the directory.
 
 	status = Get_Inode(path, &myNode);
+	
+	/*
+	// If this is a root directory
+	if( strcmp(path, "/") == 0 )
+	{
+		stbuf->st_mode = S_IFDIR | 0755;
+		stbuf->st_nlink = 2;
+	}
+	
+	if( myNode->mode = S_IFREG) // set the another file to be regular file
+	{
+		myNode->mode = S_IFREG | 0755; 
+	}
+	else( myNode->mode = S_IFDIR)
+	{
+	}
+	*/
+
 	if(status) {printf("Fail to getattr in get inode\n"); return status;}
-	myNode->mode = S_IFDIR | 0755; 
+	
+	
 	if(myNode->mode == 0){ printf("Invalid mode in get attr\n"); return -ENOENT;}
 
 	status = GetAttr(myNode, stbuf);
@@ -179,8 +200,8 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	}
 	
 	//Make sure the mode show that this is a direcoty
-	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
 	// this is for the directory other than Root
+	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
 	DirEntry currentDir[2];
     //???
 	Inode *dirNode;// = (Inode *)calloc(1,sizeof(Inode));
@@ -189,14 +210,16 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 	// Create a directory and get its inode to init
 	// this will also add its info to the parent dir
 	
-	Dir_Create_File(dir_name, mode, uid, gid, fi);
+	status = Dir_Create_Dir(dir_name, mode, uid, gid, fi);
 	
+
 	Get_Inode(dir_name, &dirNode);
    
     // ?????????? 
     // dirNode->ino = 0;
 	
     // ADd . and .. to this directory
+    /*
 	strcpy(currentDir[1].filename, "..");
 	// if this dir is the root dir then..
 	if(strcmp(dir_name, "/") ==0 )
@@ -222,14 +245,14 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 		
 	
 
-/*	
+
 // ? test file write
 	void *tempbuffer = calloc(1,dirNode->filesize);
 	File_Read(dirNode,0,dirNode->filesize, tempbuffer);
 	char * t1 = (char *)tempbuffer;
 	char * t2 = (char *)(tempbuffer + 12);
 	char * t3 = (char *)(tempbuffer + 24);
-*/
+
 
 
 	if(status)
@@ -237,9 +260,9 @@ int Dir_mkdir(const char *dir_name, mode_t mode, uid_t uid, gid_t gid)
 		printf("create with error");
 		return status;
 	}
-	
+*/	
 	// flush the content to the file, 
-	// Write the inode for the new file to the ifile
+	// Write the inode for the new file to the ifilea
 	//status = Flush_Ino(dirNode->ino);
 
 	return status;
@@ -259,6 +282,8 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 	}
 	//path++;
 
+	if(!S_ISREG(mode)){mode = mode | S_IFREG;}
+	
 	// Check if file exists unless root
 	if (strcmp(path, "/") != 0){
 		Inode *someNode;// = (Inode *)calloc(1,sizeof(Inode));
@@ -280,7 +305,7 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 	status = File_Init(&ifile[inum], S_IFREG);
 	ifile[inum].ino = inum;
-	ifile[inum].mode =  mode;
+	ifile[inum].mode = mode;
 	ifile[inum].num_links = 1;
 	ifile[inum].userID = uid;
 	ifile[inum].groupID = gid;
@@ -305,6 +330,69 @@ int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct 
 
 	return status;
 }
+
+int Dir_Create_Dir(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi){
+        // Assume this file does not exist already
+
+        int inum, status;
+        time_t t;
+        time(&t); // Store current time in t
+
+        if (path[0] != '/'){
+                printf("ERROR: invalid path: \n");
+                return -EBADF;
+        }
+        //path++;
+
+	if(!S_ISDIR(mode)){mode = mode | S_IFDIR;}
+	
+	// Check if file exists unless root
+        if (strcmp(path, "/") != 0){
+                Inode *someNode;// = (Inode *)calloc(1,sizeof(Inode));
+                status = Get_Inode(path, &someNode);
+                if (status == 0){
+                        printf( "File already exists \n");
+                        return -EEXIST;
+                }
+        }
+
+        // Get a new inum for this file - just add it to the end and expand the ifile
+        // ---???---
+        inum = Get_New_Ino();
+
+        if (inum < 0){
+                printf("ERROR can't find a good inum.\n");
+                return -ENOSPC;
+        }
+
+        status = File_Init(&ifile[inum], S_IFDIR);
+        ifile[inum].ino = inum;
+        ifile[inum].mode = mode;
+        ifile[inum].num_links = 1;
+        ifile[inum].userID = uid;
+        ifile[inum].groupID = gid;
+
+        printf( "Just created a file:\n");
+
+        // add this file to the appropriate directory ---???---
+        status = Add_File_To_Directory(path, inum);
+        if( status )
+        {
+                printf("ERROR when add file to Dir:\n");
+                return status;
+        }
+
+        // Write the inode for the new file to the disk ---???---
+        status = Flush_Ino( inum );
+        if( status )
+        {
+		 printf("ERROR when flush the inum:\n");
+                 return status;
+        }
+
+        return status;
+}
+
 
 int Dir_Read_File(const char *path, char *buf, size_t size, off_t offset,
         			struct fuse_file_info *fi){
@@ -384,8 +472,8 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 	struct stat *stbuf;
 	stbuf = (struct stat *) malloc(sizeof(struct stat));
 	char name[FILE_NAME_LENGTH];
-
-	for(i = 0; i < numfiles; i++){
+// ?? i = 0 origninally, now we do not read the first file in the directory.
+	for(i = 1; i < numfiles; i++){
 		// int j = strlen(dir[i].filename);
 		strcpy(name, dir[i].filename);
 
@@ -405,7 +493,10 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 		if( status )
 		{printf("ERROR in DirReadDir Filler"); return status;}
 	}
-
+	
+	// add "." ".." to the directory in filler:
+	filler(buf, ".", stbuf, offset);
+	filler(buf, "..", stbuf, offset);
 	time( &inode_ifile->access_Time );
 	free(stbuf);
 	return 0;
@@ -717,14 +808,14 @@ int Get_Dir_Inode(const char *path, Inode **returnNode, char *filename){
             return -EBADF; // Error bad file descriptor
         }
     
-    if( strcmp(breakpath, path) == 0 )
-    {
-        strcpy(filename, &path[0]);
-    }
-    else
-    {
+    //if( strcmp(breakpath, path) == 0 )
+    //{
+    //    strcpy(filename, &path[0]);
+    //}
+    //else
+    //{
 	strcpy(filename, &path[1]);
-    }
+    //}
     }else if (breakpath){             
         // Not root, make _Get_Inode do its job                                                    
         char *dirpath;   

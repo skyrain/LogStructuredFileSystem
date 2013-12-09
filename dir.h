@@ -46,6 +46,8 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi);
 
 int Dir_Create_File(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi);
 
+int Dir_Create_Dir(const char *path, mode_t mode, uid_t uid, gid_t gid, struct fuse_file_info *fi);
+
 void Dir_Layer_Destroy();
 
 int Dir_Statfs(const char *path, struct statvfs *Statvfs);

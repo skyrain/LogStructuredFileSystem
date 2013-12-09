@@ -88,6 +88,9 @@ extern int get_current_dir_name();
 extern int Dir_Read_Dir();
 extern int Dir_Link();
 extern int Dir_Statfs();
+
+//?? hard code 
+extern int Dir_Create_Dir();
 // Initialize FS, return value will pass in the fuse_context to all
 // file operations.
 
@@ -136,6 +139,9 @@ int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     int status = 0;
     struct fuse_context* context = fuse_get_context();
+
+    if(!S_ISREG(mode)){mode = mode | S_IFREG;}
+
     Dir_Create_File(path, mode, context->uid, context->gid, fi);
     LFS_Open(path, fi);
     if(status) {printf("LFS create fail\n"); return status;}
@@ -162,10 +168,17 @@ int LFS_Write(const char *path, const char *buf, size_t size, off_t offset, stru
     return Dir_Write_File(path, buf, size, offset, fi);
 }
 
-int LFS_Mkdir(const char *dir_name, mode_t mode)
+// hard code try ??
+int LFS_Mkdir(const char *dir_name, mode_t mode, struct fuse_file_info *fi)
 {
+    int status;
     struct fuse_context *context = fuse_get_context();
-    return Dir_mkdir(dir_name, mode, context->uid, context->gid);
+    status =  Dir_Create_Dir(dir_name, mode, context->uid, context->gid, fi);
+    status = LFS_Open(dir_name, fi);
+	
+    if(status) { printf("Mkdir fail \n"); }
+    return status;
+
 }
 
 int LFS_Truncate(const char *path, off_t offset)
