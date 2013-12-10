@@ -107,6 +107,7 @@ void *LFS_Init(struct fuse_conn_info *conn)
     { printf("fail to init\n"); return status;}
 
     // Init Directory
+//-------?? filename 改为 fl_file--------
     *status = Dir_Layer_Init(filename, cachesize);
     if(*status)
     { printf("fail to init\n"); return status;}		
@@ -368,6 +369,7 @@ int main(int argc, char *argv[])
     strcpy(fl_file, buffer);
     strcpy(fl_file + strlen(buffer), "/");
     strcpy(fl_file + strlen(buffer) + 1, s);
+    free(filename);
     /*    
     //print all the arguments
     for(i = 0; i < argc; i++)

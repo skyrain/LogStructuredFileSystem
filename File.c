@@ -70,7 +70,7 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 	// where the file end in block.
 	u_int BlockSize_byte = BLOCK_SIZE;
 	int FileEndBlock = Ino->filesize / BlockSize_byte;
-	if(Ino->filesize % BlockSize_byte ==0)
+	if(Ino->filesize % BlockSize_byte ==0 && Ino->filesize != 0)
 		FileEndBlock--;
 
 	// if the read request beyond the one block size then keep synchronize.

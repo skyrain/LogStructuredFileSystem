@@ -130,6 +130,7 @@ typedef struct Inode
     mode_t mode;
     uid_t userID;
     gid_t groupID;
+	
     time_t modify_Time;
     time_t access_Time;
     time_t create_Time;
