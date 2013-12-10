@@ -473,7 +473,13 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 	stbuf = (struct stat *) malloc(sizeof(struct stat));
 	char name[FILE_NAME_LENGTH];
 // ?? i = 0 origninally, now we do not read the first file in the directory.
-	for(i = 1; i < numfiles; i++){
+	
+	int startpoint = 0;
+		
+	if ( dirNode->ino == 0 )
+	{ startpoint = 1; }
+
+	for(i = startpoint; i < numfiles; i++){
 		// int j = strlen(dir[i].filename);
 		strcpy(name, dir[i].filename);
 
