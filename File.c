@@ -198,7 +198,10 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		firstBlockAddr.seg_no = blockPointer.seg_no;
 		firstBlockAddr.bk_no = blockPointer.bk_no;
 		// read the block to write buffer
-		status = Log_Read(&firstBlockAddr, BlockSize_byte, writeBuffer);
+		if(blockPointer.seg_no != FREE_BLOCK_NUM && blockPointer.bk_no != FREE_BLOCK_NUM)
+		{
+			status = Log_Read(&firstBlockAddr, BlockSize_byte, writeBuffer);
+		}
 		if(status)
 		{
 			printf("error, fail to read the first block the file in log\n");
@@ -211,7 +214,10 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 			Get_Block_pointer(Ino, readEndBlock, &blockPointer);
 			lastBlockAddr.seg_no = blockPointer.seg_no;
 			lastBlockAddr.bk_no = blockPointer.bk_no;
-			status = Log_Read(&lastBlockAddr, BlockSize_byte, writeBuffer + (numBlocks-1)*BlockSize_byte);
+			if(blockPointer.seg_no != FREE_BLOCK_NUM && blockPointer.bk_no != FREE_BLOCK_NUM)
+			{	
+				status = Log_Read(&lastBlockAddr, BlockSize_byte, writeBuffer + (numBlocks-1)*BlockSize_byte);
+			}			
 			if(status)
 			{
 				printf("error, fail to read the file's last block in log \n");

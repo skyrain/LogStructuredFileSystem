@@ -811,7 +811,8 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 		if(seg_in_memory->begin_bk->seg_no != log_addr->seg_no)
 		{
 			//----------1. read data from flash-----------
-			buffer = calloc(1, length);
+//-----??--------
+            //buffer = calloc(1, length);
 			//choose the model of Flash
 			Flash_Flags flags = FLASH_SILENT;
 			u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
