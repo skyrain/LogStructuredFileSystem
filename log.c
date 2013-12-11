@@ -546,6 +546,9 @@ printf("seg_no: %d\n ", tseg->begin_bk->seg_no);
 //----initially get the first cache_seg_num into memory----------
 int create_cache()
 {
+    
+    Begin_bk * tmp_begin_bk = (Begin_bk *)(seg_in_memory + sizeof(Seg));
+
     Disk_cache * cache_start = (Disk_cache *)calloc(1, sizeof(Disk_cache));
     cache_start->cache_no = 0;
     
@@ -616,7 +619,7 @@ bool read_cache(LogAddress * log_addr, u_int length, void * buffer)
     {
         //If the input log_addr's seg no is in the cache
 	Begin_bk * tmp_begin_bk = (Begin_bk *)(cache_walker->seg + sizeof(Seg));
-        if(log_addr->seg_no == tmp_begin_bk->seg_no)
+	if(log_addr->seg_no == tmp_begin_bk->seg_no)
         {
             //---if all data stored in the same seg--------------
             if(bks_tobe_read <= bks_remain)
@@ -909,7 +912,7 @@ void * copy_log_to_memory(int seg_no, void * copy_seg)
 	u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
 	u_int * blocks = &tmp;
 	Flash flash = Flash_Open(fl_file, flags, blocks); 
-	Flash_Read(flash, seg_no * seg_size, seg_size, buffer);
+	int fr = Flash_Read(flash, seg_no * seg_size, seg_size, buffer);
 
 	Flash_Close(flash);
 
@@ -1278,9 +1281,17 @@ void pushToDisk(LogAddress * log_addr)
 		u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
 		u_int * blocks = &tmp;
 		Flash   flash = Flash_Open(fl_file, flags, blocks);
+		//--- 1st erase, 2nd write ot flash-----------
+		u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+		u_int offset = erase_bks * tail_log_addr->seg_no;
+		Flash_Erase(flash, offset, erase_bks);
+		Flash_Close(flash);
+		flash = Flash_Open(fl_file, flags, blocks);
 		Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
 				seg_size, seg_in_memory);
-
+		
+		Begin_bk * tmp_begin_bk = (Begin_bk *)(seg_in_memory + sizeof(Seg));
+		printf("-seg_in_memory seg_no--%d", tmp_begin_bk->seg_no);
 		//----update the seg_usage_table--------------
 		Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
 		int i = log_addr->seg_no;
@@ -1303,7 +1314,7 @@ void pushToDisk(LogAddress * log_addr)
 		//--- for cache seg initialization--------------
 		if(written_seg_num != cache_seg_num)
 		{
-			written_seg_num ++;
+			//written_seg_num ++;
 			if(written_seg_num == cache_seg_num)
 				create_cache();
 		}
