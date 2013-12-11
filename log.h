@@ -280,9 +280,9 @@ int read_cache(LogAddress  * logAddress, u_int length, void * buffer);
 //调用flash.h的函数
 int Log_Create();
 
-void copy_log_to_memory(int seg_no, void * copy_seg);
+Seg * copy_log_to_memory(int seg_no, void * copy_seg);
 
-void get_log_to_memory(LogAddress * log_addr);
+Seg * get_log_to_memory(LogAddress * log_addr);
 
 void get_slog_to_memory();
 

@@ -144,6 +144,7 @@ int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
     if(!S_ISREG(mode)){mode = mode | S_IFREG;}
 
     Dir_Create_File(path, mode, context->uid, context->gid, fi);
+    printf("------------------ fi: %d \n", fi->fh);
     LFS_Open(path, fi);
     if(status) {printf("LFS create fail\n"); return status;}
     return status;
@@ -151,12 +152,15 @@ int LFS_Create(const char *path, mode_t mode, struct fuse_file_info *fi)
 
 int LFS_Open(const char *path, struct fuse_file_info *fi)
 {
-    return Dir_Open_File(path, fi);
+    // printf("------------------ fi: %d \n", fi->fh);
+     return Dir_Open_File(path, fi);
 }
 
 int LFS_OpenDir(const char *path, struct fuse_file_info *fi)
 {
-    return Dir_Open_File(path, fi);
+        printf("fi: %d \n",fi->fh);
+	return Dir_Open_File(path, fi);
+    
 }
 
 int LFS_Read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
@@ -175,6 +179,7 @@ int LFS_Mkdir(const char *dir_name, mode_t mode, struct fuse_file_info *fi)
     int status;
     struct fuse_context *context = fuse_get_context();
     status =  Dir_Create_Dir(dir_name, mode, context->uid, context->gid, fi);
+//    printf("------------------ fi: %d \n", fi->fh);
     status = LFS_Open(dir_name, fi);
 	
     if(status) { printf("Mkdir fail \n"); }
@@ -365,7 +370,7 @@ int main(int argc, char *argv[])
     char* buffer = get_current_dir_name();
     char * s = (char *)calloc(1, 8);
     strcpy(s, filename);
-    fl_file = (char *)calloc(1, strlen(buffer) + strlen(s) + 1);
+    fl_file = (char *)calloc(1, strlen(buffer) + strlen(s) + 2);
     strcpy(fl_file, buffer);
     strcpy(fl_file + strlen(buffer), "/");
     strcpy(fl_file + strlen(buffer) + 1, s);
@@ -441,7 +446,7 @@ int main(int argc, char *argv[])
 
     inode_ifile = checkpoint->ifile;
 
-    get_log_to_memory(tail_log_addr);
+    seg_in_memory = get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------
     //------------- create cache once the whole system ----------
     //---------- starts to run------------------------------------
