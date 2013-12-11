@@ -32,7 +32,7 @@ extern Disk_cache * disk_cache;
 //-------points to the logAddress that could start to write data-------
 extern LogAddress * tail_log_addr;
 
-extern Seg * seg_in_memory;
+extern void * seg_in_memory;
 
 
 extern u_int wearlimit;

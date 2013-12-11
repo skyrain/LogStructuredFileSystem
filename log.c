@@ -552,7 +552,7 @@ int create_cache()
     void * tbuffer;// = calloc(1, seg_size * FLASH_SECTOR_SIZE);
     int initial_data_seg;
     initial_data_seg = super_seg->checkpoint_size / (bks_per_seg - 1) + 1; 
-    Seg * test = copy_log_to_memory(initial_data_seg, tbuffer);
+    void * test = copy_log_to_memory(initial_data_seg, tbuffer);
     //Seg * test = (Seg *)tbuffer;
     cache_start->seg = test;
 
@@ -615,7 +615,8 @@ bool read_cache(LogAddress * log_addr, u_int length, void * buffer)
     while(cache_walker != NULL)
     {
         //If the input log_addr's seg no is in the cache
-        if(log_addr->seg_no == cache_walker->seg->begin_bk->seg_no)
+	Begin_bk * tmp_begin_bk = (Begin_bk *)(cache_walker->seg + sizeof(Seg));
+        if(log_addr->seg_no == tmp_begin_bk->seg_no)
         {
             //---if all data stored in the same seg--------------
             if(bks_tobe_read <= bks_remain)
@@ -813,8 +814,9 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 	//-----  cache 未被创建-------------
 	else
 	{
+		Begin_bk * tmp_begin_bk = (Begin_bk *)(seg_in_memory + sizeof(Seg));
 		//----case 1: 要读的存在disk, 直接读 disk ----------------------
-		if(seg_in_memory->begin_bk->seg_no != log_addr->seg_no)
+		if(tmp_begin_bk->seg_no != log_addr->seg_no)
 		{
 			//----------1. read data from flash-----------
 //-----??--------
@@ -883,6 +885,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 		else
 		//----case 2: 要读的存在seg_in_memory----------------
 		{
+			printf("Log Read ---- length -----%d\n", length);
 			memcpy(buffer, seg_in_memory + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, length);
 		}
 	}
@@ -895,7 +898,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 
 //----------copy seg into memory for cache use -----------
 //---------- to be written data---------------------------
-Seg * copy_log_to_memory(int seg_no, void * copy_seg)
+void * copy_log_to_memory(int seg_no, void * copy_seg)
 {
 	void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
 	//-------??	
@@ -947,14 +950,15 @@ Seg * copy_log_to_memory(int seg_no, void * copy_seg)
 	//    memcpy(copy_seg, tseg, seg_size * FLASH_SECTOR_SIZE);
 	//    free(tseg);
 
-	return tseg;
+//	return tseg;
+return buffer;
 }
 
 
 //----------grab one seg from flash memory into memory-------
 //---------- to be written data----------------------------
 //-- serve for log write func-------------------------------
-Seg * get_log_to_memory(LogAddress * log_addr)
+void * get_log_to_memory(LogAddress * log_addr)
 {
 	void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
 	//choose the model of Flash
@@ -1002,7 +1006,10 @@ Seg * get_log_to_memory(LogAddress * log_addr)
         sse_walker = sse_walker->next;
     }
 
-	return tseg;
+//	return tseg;
+return buffer;
+
+
 /*
     //--------reconstruct the segment to memory from disk-------------    
     u_int bytes_offset = 0;
@@ -1073,11 +1080,9 @@ void get_slog_to_memory()
 bool is_bk_in_use(LogAddress * log_addr)
 {
     void * tbuffer;// = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    Seg * tseg = copy_log_to_memory(log_addr->seg_no, tbuffer);
- //   Seg * tseg = (Seg *)tbuffer;
-    printf("seg_no: %d \n", tseg->begin_bk->seg_no);   
+    void * tseg = copy_log_to_memory(log_addr->seg_no, tbuffer);
  
-    Seg_sum_entry * sse_walker = tseg->begin_bk->ssum_bk->seg_sum_entry;
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)(tseg + sizeof(Seg)+ sizeof(Begin_bk)+ sizeof(Seg_sum_bk));
     while(sse_walker->bk_no != log_addr->bk_no)
         sse_walker = sse_walker->next;
 
@@ -1244,7 +1249,8 @@ void update_cache(int seg_no)
 	Disk_cache * c_walker = disk_cache;
 	while(c_walker != NULL)
 	{
-		if(c_walker->seg->begin_bk->seg_no == seg_no)
+		Begin_bk * tmp_begin_bk = (Begin_bk *)(c_walker->seg + sizeof(Seg));
+		if(tmp_begin_bk->seg_no == seg_no)
 		{
 			void * tbuffer;// = calloc(1, seg_size * FLASH_SECTOR_SIZE);
 			c_walker->seg = copy_log_to_memory(seg_no, tbuffer);
@@ -1315,7 +1321,8 @@ void pushToDisk(LogAddress * log_addr)
 		Disk_cache * c_walker = disk_cache;
 		while(c_walker != NULL)
 		{
-			if(c_walker->seg->begin_bk->seg_no == log_addr->seg_no)
+			Begin_bk * tmp_begin_bk = (Begin_bk *)(c_walker->seg + sizeof(Seg));
+			if(tmp_begin_bk->seg_no == log_addr->seg_no)
 			{
 				memset(c_walker->seg, 0, seg_size * FLASH_SECTOR_SIZE);
 				void * tb = calloc(1, seg_size * FLASH_SECTOR_SIZE);
@@ -1339,12 +1346,16 @@ void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
 {
     printf("writeToLog: seg_no, %d   ", log_addr->seg_no);
     printf("writeToLog: bk_no, %d    \n", log_addr->bk_no);
+    printf("buf size: %d\n", sizeof(*buffer));
+    printf("seg_in_memory size: %d\n", sizeof(*seg_in_memory));
+    
     //---change the log_addr's content------------
     memcpy(seg_in_memory + bk_size * log_addr->bk_no * FLASH_SECTOR_SIZE,
             buffer, bk_size * FLASH_SECTOR_SIZE);
 
-    Seg_sum_entry * sse_walker = seg_in_memory->begin_bk->ssum_bk->seg_sum_entry;
-    //----change the seg_in_memory's Begin_bk's seg_sum_entry---------
+//    Seg_sum_entry * sse_walker = seg_in_memory->begin_bk->ssum_bk->seg_sum_entry;
+   Seg_sum_entry * sse_walker =(Seg_sum_entry *) (seg_in_memory + sizeof(Seg) + sizeof(Begin_bk) + sizeof(Seg_sum_bk));  
+  //----change the seg_in_memory's Begin_bk's seg_sum_entry---------
     while(sse_walker != NULL)
     {
         if(log_addr->bk_no == sse_walker->bk_no)

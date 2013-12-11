@@ -195,7 +195,7 @@ typedef struct Disk_cache
     int cache_no;
 
     //this cache is from which seg
-    Seg * seg;
+    void * seg;
 
     bool IS_JUST_UPDATE;
 
@@ -211,7 +211,7 @@ Disk_cache * disk_cache;
 //-------points to the logAddress that could start to write data-------
 LogAddress * tail_log_addr;
 
-Seg * seg_in_memory;
+void * seg_in_memory;
 
 
 u_int wearlimit;
@@ -280,9 +280,9 @@ int read_cache(LogAddress  * logAddress, u_int length, void * buffer);
 //调用flash.h的函数
 int Log_Create();
 
-Seg * copy_log_to_memory(int seg_no, void * copy_seg);
+void * copy_log_to_memory(int seg_no, void * copy_seg);
 
-Seg * get_log_to_memory(LogAddress * log_addr);
+void * get_log_to_memory(LogAddress * log_addr);
 
 void get_slog_to_memory();
 
