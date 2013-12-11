@@ -314,9 +314,8 @@ void clean_seg()
 		    // link to the next block in this segment	
 		    SegSumEntry = SegSumEntry->next;
 		}
-
 	// update the number of live blocks
-	sut_walker->num_live_bk = num_live_bk;
+	sut_walker->num_live_bk = NumLiveBlock;
 	}
     }
     //-----? 等翁旭东---------------    
