@@ -103,7 +103,7 @@ int Dir_Open_File(const char *path, struct fuse_file_info *fi)
 	if(status) {printf("openning file fail\n"); return status;}
 	
 	printf("----------------------------ino: %d \n", myNode->ino);
-	fi->fh = myNode->ino;
+	fi->fh = (uint64_t)myNode->ino;
 
 	return status;
 }

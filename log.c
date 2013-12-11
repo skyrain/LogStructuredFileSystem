@@ -885,7 +885,7 @@ int Log_Read(LogAddress * log_addr, u_int length, void * buffer)
 		else
 		//----case 2: 要读的存在seg_in_memory----------------
 		{
-			printf("Log Read ---- length -----%d\n", length);
+		//	printf("Log Read ---- length -----%d\n", length);
 			memcpy(buffer, seg_in_memory + log_addr->bk_no * bk_size * FLASH_SECTOR_SIZE, length);
 		}
 	}
@@ -1335,7 +1335,7 @@ void pushToDisk(LogAddress * log_addr)
 	}
 	else
 	{
-		printf("This time write not push to Disk!\n");
+	;	//printf("This time write not push to Disk!\n");
 	}
 }
 
@@ -1344,10 +1344,10 @@ void pushToDisk(LogAddress * log_addr)
 //-------each time call the log_write func----------------
 void writeToLog(int inum, int block, void * buffer, LogAddress * log_addr)
 {
-    printf("writeToLog: seg_no, %d   ", log_addr->seg_no);
-    printf("writeToLog: bk_no, %d    \n", log_addr->bk_no);
-    printf("buf size: %d\n", sizeof(*buffer));
-    printf("seg_in_memory size: %d\n", sizeof(*seg_in_memory));
+    //printf("writeToLog: seg_no, %d   ", log_addr->seg_no);
+   // printf("writeToLog: bk_no, %d    \n", log_addr->bk_no);
+   // printf("buf size: %d\n", sizeof(*buffer));
+   // printf("seg_in_memory size: %d\n", sizeof(*seg_in_memory));
     
     //---change the log_addr's content------------
     memcpy(seg_in_memory + bk_size * log_addr->bk_no * FLASH_SECTOR_SIZE,
