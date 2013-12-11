@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include "log.h"
 #include "dir.h"
+#include "File.h"
 //-----------define the metadata -------
 
 Seg_sum_entry *segSumEntry;
 Seg_sum_bk *segSumBk;
+Checkpoint *cp;
 
 //segment usage, block usage 
 Seg_usage_table *SegUsageTable;
@@ -20,10 +22,6 @@ int lengthIFile;
 u_int seg_num;
 int bk_per_seg;
 extern Super_seg* super_seg;
-
-static void print_usage(){
-	printf( "USAGE\n" );
-}
 
 int Check_Block(int inum, int file_blocknum, Block_pointer *blockPointer){
 
@@ -101,87 +99,36 @@ int Check_File(Inode *myNode){
 
 int main(int argc, char *argv[])
 {
-	char	*Flashname; // Name of file that is our disk
-	int		status, i;
-	int sizeBUT; // holds the size in bytes of the block usage table
+	fl_file = (char *)calloc(1, 8); // Name of file that is our disk
+	int status, i;
+	int size; // holds the size in bytes of the block usage table
 	Inode *rootNode;
-	char *block_buff; // Can hold one block of data
 	Inode *myNode; // This buffer will hold the ifile
 	Inode *ifile;
 	int ROOT_INO = 0;
-
-	char* buffer = get_current_dir_name();
-	char * s = "/config.ini";
-   	char * config = (char *)calloc(1, strlen(buffer) + strlen(s));
-	strcpy(config, buffer);
-	strcpy(config + strlen(buffer), s);
-
-      	FILE *fp;
-
-	if((fp=fopen(config,"rb")) == NULL)
+	
+	// handle the parameter.
+	if(argc < 2)
 	{
-	
-		printf("\nopen file error");
-
-		exit(1);
-
-	}
-
-	char store_seg_size[5];
-	fgets(store_seg_size, 5, fp);
-	seg_size = (u_int)atoi(store_seg_size);
-
-
-	
-	char store_sec_num[5];
-
-	fgets(store_sec_num, 5, fp);
-
-	
-	//------------------if use fclose() 为毛有错 ????------------
-
-	//    //---------暂时先不用----------------------------------------
-
-	//        //  fclose(fp);
-	sec_num = (u_int)atoi(store_sec_num);
-
-	free(config);
-	//
-
-	seg_num = sec_num / seg_size;
-	get_slog_to_memory();
-	
-	ifile = super_seg -> checkpoint -> ifile;
-	
-	 // one required argument: (first arg is executable name)
-	 //	-filename for the flash file
-	
-	// read the Flashname from the argument
-	if( argc < 2){
-		print_usage();
-		return EXIT_FAILURE;
-	} else {
-		Flashname = argv[1];
+		printf("Invalid ! \n");
+	}else
+	{
+		strcpy(fl_file,argv[1]);
 	}
 	
-	// Not need to init in this way, I cannot handle that
-	/*
-	status = Dir_Layer_Init(Flashname, 5); //set cache size to 5 - it shouldn't matter
-	if (status){
-		return status;
-	}
-	*/
-	
-	// ---???--- ifile
-	//if (ifile->filesize == 0){
-	//	printf("LFS not fully initialized. Please run LFS before checking.\n");
-	//	return 1;
-	//}
-	
-	// Another functions ??
-	// Allocate the block buffer
+	status = Dir_Layer_Init(fl_file, 5);
+	if(status){ return status;}
 
-	// Get the root Inode
+	get_checkpoint_to_memory();
+	
+	if( cp->ifile->filesize == 0 )
+	{
+		printf("LFS not initialized yet \n");
+		return 1;
+	}
+	
+	ifile = cp->ifile;
+
 	status = Get_Inode_From_Inum(0, &rootNode);
 	if (status){
 		printf("ERROR getting root Inode.\n");
@@ -208,7 +155,7 @@ int main(int argc, char *argv[])
 	Seg_sum_entry *SegBlockTable;
 
 	SegUsageTable = (Seg_usage_table *)calloc(1,sizeof(Seg_usage_table));
-	SegBlockTable = super_seg -> seg_usage_table;
+	SegBlockTable = cp -> seg_usage_table;
 
 	/*
 	printf("Checking the segment usage table...\n");
@@ -235,11 +182,9 @@ int main(int argc, char *argv[])
 			printf("ERROR: Inode %i exists in ifile but does not appear in the directories.\n", i);
 		}
 	}
-
+	
+	Dir_Layer_Destroy();
 	//status = Open_Log( Flashname, &log, printing );
-
-	// done, shut down, undone
-	//Dir_Layer_Denit();
 
 	free(SegUsageTable);
 	free(SegBlockTable);
