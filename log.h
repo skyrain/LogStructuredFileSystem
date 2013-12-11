@@ -248,6 +248,20 @@ u_int bk_content_size;
 u_int cache_seg_num;   
 
 u_int written_seg_num;
+
+//--- global variable in log.h ---------
+//--- 初始化于LFS.c, 每pushToDisk中的if true，则 - 1---
+//--- cleanning mechanism 
+#define MIN_AVAILABLE_SEG_NUM 6
+//--- CLEAN_SEG_NUM: clean this # of segs for future use----
+//--- note: need to check that the entire clean seg should --
+//-------------------- < seg_num ----------------------------
+#define CLEAN_SEG_NUM 20
+//--- intialize in LFS.c to be == seg_num ------------------
+//--- decrease in pushToDisk() -----------------------------
+int available_seg_num;
+
+
 //-------------------------------------------------------------
 
 
@@ -306,4 +320,12 @@ int Log_Free(int seg_no);
 
 
 int Log_Init(char* filename, Inode * ifile, u_int cachesize);
+
+
+bool is_in_wealimit(LogAddress * log_addr);
+bool is_bk_in_use(LogAddress * log_addr);
+bool is_remain_seg_not_usable(LogAddress * log_addr);
+void locate_tail_log_addr_bk(LogAddress * log_addr);
+
+
 #endif

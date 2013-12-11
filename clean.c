@@ -1,3 +1,7 @@
+#include "log.h"
+#include "File.h"
+
+#define FREE_BLOCK_NUM -1
 //--- global variable in log.h ---------
 //--- 初始化于LFS.c, 每pushToDisk中的if true，则 - 1---
 //--- cleanning mechanism 
@@ -10,14 +14,11 @@
 //--- decrease in pushToDisk() -----------------------------
 int available_seg_num;
 
-
+extern bool is_in_wearlimit(LogAddress * log_addr);
 
 //------- put funcs in dir.c -------------------
 //----------------------------------------------
 //-----------------------------=-----------------
-
-
-
 //-------prerequisite: know the log_addr->seg_no has good bk to be used-----
 //--- find available bk includes log_addr->bk itself-----------------------
 void locate_log_addr_bk(LogAddress * log_addr, LogAddress * c_log_addr)
@@ -64,7 +65,7 @@ void locate_log_addr_from_begin(LogAddress * log_addr)
             //---- if this seg has available bk to store data---
             if(!is_remain_seg_not_usable(tmp_addr))
             {
-                locate_tail_log_addr_bk(tmp_addr, log_addr);
+                locate_log_addr_bk(tmp_addr, log_addr);
                 free(tmp_addr);
                 break;
             } 
@@ -123,17 +124,11 @@ void find_new_addr_for_live_bk(LogAddress * log_addr)
 void move_live_bk(LogAddress * log_addr)
 {
     //--- 1. read log_addr bk out of original place ---
-    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    Flash_Flags flags = FLASH_SILENT;
-    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
-    u_int * blocks = &tmp;
-    Flash flash = Flash_Open(fl_file, flags, blocks);
-    Flash_Read(flash, log_addr->seg_no * seg_size, seg_size, buffer);
-
-    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    copy_log_to_memory(log_addr->seg_no, buffer);
+    void * buffer;
+    buffer = copy_log_to_memory(log_addr->seg_no, buffer);
     Seg * tseg = (Seg *)buffer;
-    Seg_sum_entry * sse_walker = tseg->begin_bk->ssum_bk->seg_sum_entry;
+    Seg_sum_entry * sse_walker = (Seg_sum_entry *)(tseg + sizeof(Seg)
++ sizeof(Begin_bk)+sizeof(Seg_sum_bk));
     int file_no = 0;
     int file_bk_no = 0;
     while(sse_walker != NULL)
@@ -148,13 +143,21 @@ void move_live_bk(LogAddress * log_addr)
     }
     //--- 2. find new location -----------------------
     find_new_addr_for_live_bk(log_addr); 
-    //--- 3. write bk to new location -----------------
+
+    Flash_Flags flags = FLASH_SILENT;
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+   //--- 3. write bk to new location -----------------
     Flash_Write(flash, log_addr->seg_no * seg_size, seg_size, buffer);
-    //--- 4. change the new location's seg's seg_sum_entry---
-    void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    copy_log_to_memory(log_addr->seg_no, tbuffer);
+    Flash_Close(flash); 
+  //--- 4. change the new location's seg's seg_sum_entry---
+    void * tbuffer;
+    tbuffer = copy_log_to_memory(log_addr->seg_no, tbuffer);
     Seg * ttseg = (Seg *)tbuffer;
-    Seg_sum_entry * sse_walker = ttseg->begin_bk->ssum_bk->seg_sum_entry;
+    sse_walker = (Seg_sum_entry *)(ttseg + sizeof(Seg)
++ sizeof(Begin_bk)+sizeof(Seg_sum_bk));
+
     while(sse_walker != NULL)
     {
         if(sse_walker->bk_no == log_addr->bk_no)
@@ -174,6 +177,7 @@ void move_live_bk(LogAddress * log_addr)
 
 }
 
+/*
 //-------- erase seg for cleaning mechanism--------------------
 //--------- in unit of  16  sectors---------------------------
 //-------- 调用改函数前(seg_no)th seg的num_live_bks & --------
@@ -255,6 +259,7 @@ int Log_Free(int seg_no)
 
     return 0;
 }
+
 
 //--- cleaning func in pushToDisk() ---------------
 //-- note: checkpoint 不参与cleaning mechanism ----
@@ -404,6 +409,7 @@ int Log_Free(int seg_no)
     return 0;
 }
 
+
 //--- cleaning func in pushToDisk() ---------------
 //-- note: checkpoint 不参与cleaning mechanism ----
 void clean_seg()
@@ -458,6 +464,8 @@ void clean_seg()
 
 }
 
+*/
+
 //-------- erase seg for cleaning mechanism--------------------
 //--------- in unit of  16  sectors---------------------------
 //-------- 调用改函数前(seg_no)th seg的num_live_bks & --------
@@ -502,7 +510,7 @@ int Log_Free(int seg_no)
     Flash_Erase(flash, offset, erase_bks);
     //--- reconstruct the seg structure -----------------
     void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-    bytes_offset = 0;
+    u_int bytes_offset = 0;
     Seg * ts = (Seg *)n_seg_buffer;
     ts->begin_bk = n_seg_buffer + sizeof(Seg);
     bytes_offset += sizeof(Seg);
@@ -547,6 +555,7 @@ void clean_seg()
     //--- check whether start cleaning mechanism----
     if(available_seg_num < MIN_AVAILABLE_SEG_NUM)
     {
+	printf("-------start cleaning------------\n");
         int i;
 
         //--- update seg_usage_table's num_live_bk attribute-----------
@@ -576,7 +585,8 @@ void clean_seg()
                 //ifile = (Inode *)calloc(1, inode_ifile->filesize);
                 //status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
 
-                Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum_bk->Seg_sum_entry;
+                Seg_sum_entry * SegSumEntry = (Begin_bk *)(tseg + sizeof(Seg)
++sizeof(Begin_bk)+sizeof(Seg_sum_bk));
 
                 int inum;
                 int file_bk; 
@@ -601,7 +611,7 @@ void clean_seg()
                 }
 
                 // update the number of live blocks
-                sut_walker->num_live_bk = num_live_bk;
+                sut_walker->num_live_bk = NumLiveBlock;
            }
         }
 

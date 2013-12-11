@@ -1289,7 +1289,7 @@ void pushToDisk(LogAddress * log_addr)
 		flash = Flash_Open(fl_file, flags, blocks);
 		Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
 				seg_size, seg_in_memory);
-		
+		available_seg_num--;
 		Begin_bk * tmp_begin_bk = (Begin_bk *)(seg_in_memory + sizeof(Seg));
 		printf("-seg_in_memory seg_no--%d", tmp_begin_bk->seg_no);
 		//----update the seg_usage_table--------------

@@ -9,6 +9,7 @@
 //#include <sys/types.h>
 #include "log.h"
 #include <sys/types.h>
+Inode *ifile; //ifile stores an array of inodes
 
 u_int BLOCK_SIZE;
 

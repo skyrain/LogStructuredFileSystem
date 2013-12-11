@@ -12,7 +12,7 @@
 #include "dir.h"
 
 #define ROOT_INUM 0
-Inode *ifile; //ifile stores an array of inodes
+//Inode *ifile; //ifile stores an array of inodes
 Inode *inode_ifile; // the inode of ifile;
 int ifile_length; //number of files currently held in the ifile;
 

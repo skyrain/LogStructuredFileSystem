@@ -432,6 +432,7 @@ int main(int argc, char *argv[])
     bk_size= s_seg->bk_size;
     bks_per_seg = seg_size / bk_size;
     seg_num = sec_num / seg_size;
+    available_seg_num = seg_num;
     free(s_seg);
 
     bk_content_size = bk_size * FLASH_SECTOR_SIZE;

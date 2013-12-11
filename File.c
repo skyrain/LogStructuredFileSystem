@@ -11,7 +11,7 @@
 #include "File.h"
 //#include "log.h"
 #include <errno.h>
-
+#include "clean.c"
 
 //--------?? log.h already has this-------
 #define DIRECT_BK_NUM 4
@@ -145,6 +145,8 @@ int File_Read(Inode *Ino, int offset, int length, void *buffer)
 
 int File_Write(Inode *Ino, int offset, int length, void *buffer)
 {
+	//----- check wheher do cleaning mechanism ----
+	clean_seg();	
 	// length to be written in bytes
 	
 	int status = 0;
