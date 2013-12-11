@@ -168,9 +168,290 @@ void move_live_bk(LogAddress * log_addr)
 
     //--- 5. change the Inode Block pointer points to this new location--
 
-    /////////////////////////
+    int inum = sse_walker->file_no;
+    ifile[inum].direct_bk[file_bk_no].bk_no = log_addr->bk_no;
+    ifile[inum].direct_bk[file_bk_no].seg_no = log_addr->seg_no;
 
+}
 
+//-------- erase seg for cleaning mechanism--------------------
+//--------- in unit of  16  sectors---------------------------
+//-------- 调用改函数前(seg_no)th seg的num_live_bks & --------
+//---- seg_sum_entry 已经updated ------------------------------
+int Log_Free(int seg_no)
+{
+    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    copy_log_to_memory(seg_no, buffer);
+    Seg * seg = (Seg *)buffer;
+
+    //----1. move live bks to other segs -----------------
+    int i;
+    for(i = 1; i < bks_per_seg; i++)
+    {
+        int j = i;
+        Seg_sum_entry * sse_walker = seg->begin_bk->ssum_bk->seg_sum_entry; 
+        while(j > 1)
+        {
+            sse_walker = sse_walker->next;
+            j--;
+        }
+        //--- check ith bk's seg_sum_entry -------------
+        //-- if points to a live bk --------------------
+        if(sse_walker->file_no != -1)
+        {
+            LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));            tmp_addr->seg_no = seg_no;
+            tmp_addr->bk_no = i;
+            move_live_bk(tmp_addr);
+            free(tmp_addr);           
+        }
+
+    }    
+    //----2. free this seg ------------------------------
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+    u_int offset = (seg_size / FLASH_SECTORS_PER_BLOCK) * seg_no; 
+    u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+    Flash_Erase(flash, offset, erase_bks);
+    //--- reconstruct the seg structure -----------------
+    void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    bytes_offset = 0;
+    Seg * ts = (Seg *)n_seg_buffer;
+    ts->begin_bk = n_seg_buffer + sizeof(Seg);
+    bytes_offset += sizeof(Seg);
+    //--------begin bk----------------------------------
+    Begin_bk * bb = (Begin_bk *)(n_seg_buffer + bytes_offset);
+    bb->seg_no = i;
+    bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
+    bytes_offset += sizeof(Begin_bk);
+    //----seg sum bk of begin bk----------------------------
+    Seg_sum_bk * ssb = (Seg_sum_bk *)(n_seg_buffer + bytes_offset);
+    ssb->bk_no = 0;
+    ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
+    bytes_offset += sizeof(Seg_sum_bk);
+    //---- seg sum entry of seg sum bk---------------------- 
+    int j;
+    for(j = 1; j < bks_per_seg; j++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(n_seg_buffer
+                + bytes_offset);
+        sse->bk_no = j;
+        sse->file_no = -1;
+        sse->file_bk_no = -1;
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = n_seg_buffer + bytes_offset;
+        else
+            sse->next = NULL;
+    }
+
+    Flash_Write(flash, seg_size * seg_no, seg_size, n_seg_buffer);
+    free(n_seg_buffer);
+
+    Flash_Close(flash);
+
+    return 0;
+}
+
+//--- cleaning func in pushToDisk() ---------------
+//-- note: checkpoint 不参与cleaning mechanism ----
+void clean_seg()
+{
+    //--- check whether start cleaning mechanism----
+    if(available_seg_num < MIN_AVAILABLE_SEG_NUM)
+    {
+        int i;
+
+        //--- update seg_usage_table's num_live_bk attribute-----------
+        //--- & update each seg's seg_sum_entry -----------------------
+        for(i = 1; i < seg_num; i++)
+        {
+            //---scan segs which store data(not checkpoint seg),--------
+            //--- check seg_usage_table's is_checkpoint ----
+            Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+            int j = i;
+            while(j > 1)
+            {
+                sut_walker = sut_walker->next;
+                j--;
+            }
+            
+            //---update num_live_bk attribute in seg_usage_table--
+            if(sut_walker->is_checkpoint == false)
+            {
+                void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+                copy_log_to_memory(i, tbuffer);
+                Seg * tseg = (Seg *)tbuffer;
+
+                // Initial the temp parameter for segment summery entry
+                int status = 0;
+                int NumLiveBlock = 0;
+                //ifile = (Inode *)calloc(1, inode_ifile->filesize);
+                //status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
+
+                Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum_bk->Seg_sum_entry;
+
+                int inum;
+                int file_bk; 
+                int i;
+
+                for(i = 0; i < bks_per_seg; i++){
+                    inum = SegSumEntry->file_no; 
+                    file_bk = SegSumEntry->file_bk_no;
+
+                    if(SegSumEntry->bk_no == ifile[inum].direct_bk[file_bk].bk_no)
+    		    {	
+			    NumLiveBlock ++;
+		    }
+		    else
+		    {
+			    SegSumEntry->bk_no = FREE_BLOCK_NUM;
+			    SegSumEntry->file_no = FREE_BLOCK_NUM;
+		    }
+		    // link to the next block in this segment	
+		    SegSumEntry = SegSumEntry->next;
+		}
+	// update the number of live blocks
+	sut_walker->num_live_bk = NumLiveBlock;
+	}
+    }
+    //-----? 等翁旭东---------------    
+
+}
+
+//-------- erase seg for cleaning mechanism--------------------
+//--------- in unit of  16  sectors---------------------------
+//-------- 调用改函数前(seg_no)th seg的num_live_bks & --------
+//---- seg_sum_entry 已经updated ------------------------------
+int Log_Free(int seg_no)
+{
+    void * buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    copy_log_to_memory(seg_no, buffer);
+    Seg * seg = (Seg *)buffer;
+
+    //----1. move live bks to other segs -----------------
+    int i;
+    for(i = 1; i < bks_per_seg; i++)
+    {
+        int j = i;
+        Seg_sum_entry * sse_walker = seg->begin_bk->ssum_bk->seg_sum_entry; 
+        while(j > 1)
+        {
+            sse_walker = sse_walker->next;
+            j--;
+        }
+        //--- check ith bk's seg_sum_entry -------------
+        //-- if points to a live bk --------------------
+        if(sse_walker->file_no != -1)
+        {
+            LogAddress * tmp_addr = (LogAddress *)calloc(1, sizeof(LogAddress));            tmp_addr->seg_no = seg_no;
+            tmp_addr->bk_no = i;
+            move_live_bk(tmp_addr);
+            free(tmp_addr);           
+        }
+
+    }    
+    //----2. free this seg ------------------------------
+    //choose the model of Flash
+    Flash_Flags flags = FLASH_SILENT;
+    //blocks : # of blocks in the flash
+    u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+    u_int * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+    u_int offset = (seg_size / FLASH_SECTORS_PER_BLOCK) * seg_no; 
+    u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+    Flash_Erase(flash, offset, erase_bks);
+    //--- reconstruct the seg structure -----------------
+    void * n_seg_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+    bytes_offset = 0;
+    Seg * ts = (Seg *)n_seg_buffer;
+    ts->begin_bk = n_seg_buffer + sizeof(Seg);
+    bytes_offset += sizeof(Seg);
+    //--------begin bk----------------------------------
+    Begin_bk * bb = (Begin_bk *)(n_seg_buffer + bytes_offset);
+    bb->seg_no = i;
+    bb->ssum_bk = n_seg_buffer + bytes_offset + sizeof(Begin_bk);
+    bytes_offset += sizeof(Begin_bk);
+    //----seg sum bk of begin bk----------------------------
+    Seg_sum_bk * ssb = (Seg_sum_bk *)(n_seg_buffer + bytes_offset);
+    ssb->bk_no = 0;
+    ssb->seg_sum_entry = n_seg_buffer + bytes_offset + sizeof(Seg_sum_bk);
+    bytes_offset += sizeof(Seg_sum_bk);
+    //---- seg sum entry of seg sum bk---------------------- 
+    int j;
+    for(j = 1; j < bks_per_seg; j++)
+    {
+        Seg_sum_entry * sse = (Seg_sum_entry *)(n_seg_buffer
+                + bytes_offset);
+        sse->bk_no = j;
+        sse->file_no = -1;
+        sse->file_bk_no = -1;
+        bytes_offset += sizeof(Seg_sum_entry);
+        if(i != bks_per_seg - 1)
+            sse->next = n_seg_buffer + bytes_offset;
+        else
+            sse->next = NULL;
+    }
+
+    Flash_Write(flash, seg_size * seg_no, seg_size, n_seg_buffer);
+    free(n_seg_buffer);
+
+    Flash_Close(flash);
+
+    return 0;
+}
+
+//--- cleaning func in pushToDisk() ---------------
+//-- note: checkpoint 不参与cleaning mechanism ----
+void clean_seg()
+{
+    //--- check whether start cleaning mechanism----
+    if(available_seg_num < MIN_AVAILABLE_SEG_NUM)
+    {
+        int i;
+
+        //--- update seg_usage_table's num_live_bk attribute-----------
+        //--- & update each seg's seg_sum_entry -----------------------
+        for(i = 1; i < seg_num; i++)
+        {
+            //---scan segs which store data(not checkpoint seg),--------
+            //--- check seg_usage_table's is_checkpoint ----
+            Seg_usage_table * sut_walker = checkpoint->seg_usage_table;
+            int j = i;
+            while(j > 1)
+            {
+                sut_walker = sut_walker->next;
+                j--;
+            }
+            
+            //---update num_live_bk attribute in seg_usage_table--
+            if(sut_walker->is_checkpoint == false)
+            {
+                void * tbuffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+                copy_log_to_memory(i, tbuffer);
+                Seg * tseg = (Seg *)tbuffer;
+
+                // Initial the temp parameter for segment summery entry
+                int status = 0;
+                int NumLiveBlock = 0;
+                //ifile = (Inode *)calloc(1, inode_ifile->filesize);
+                //status = File_Read(inode_ifile, 0, inode_ifile->filesize, ifile);
+
+                Seg_sum_entry * SegSumEntry = tseg->begin_bk->Seg_sum_bk->Seg_sum_entry;
+
+                int inum;
+                int file_bk; 
+                int i;
+
+                for(i = 0; i < bks_per_seg; i++){
+                    inum = SegSumEntry->file_no; 
+                    file_bk = SegSumEntry->file_bk_no;
+
+                    if(SegSumEntry->bk_no == ifile[inum].d
+    ifile[inum]->
 
 
     //-----? 等翁旭东---------------    
