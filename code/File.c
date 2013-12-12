@@ -538,6 +538,14 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 {
 	int status;
+
+	// if the block number is larger than the number of direct
+	// block, then set the write block to indirect block 
+	if(BlockNumber > DIRECT_BK_NUM - 1)
+	{
+		BlockNumber = INDIRECT_BK_NUM;
+	}
+
 	// beyond the current file
 	if((BlockNumber * BLOCK_SIZE) > Ino->filesize)
 	{
