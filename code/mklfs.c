@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include "flash.h"
 #include "log.h"
-
+#include <string.h>
 /*  
   mklfs [options] file
     -l size, --segment=size
@@ -21,8 +21,8 @@ int main(int argc, char * argv[])
 {
     //---------------default value----------------------
     wearlimit = 1000;
-    fl_file = (char *)calloc(1, 8);
-    strcpy(fl_file, "File");         
+//    fl_file = (char *)calloc(1, 8);
+ //   strcpy(fl_file, "File");         
 
     //----- sec_num & bks_per_seg should always be 16 的整数倍
     sec_num = 1024;
@@ -65,8 +65,23 @@ int main(int argc, char * argv[])
             case '?':
                 break;  
         }
-    }  
-    strcpy(fl_file, argv[argc - 1]);
+    } 
+    
+
+    char * fn = (char *)calloc(1,8);
+    strcpy(fn, argv[argc - 1]);
+
+    char* bf = get_current_dir_name();
+    char * s = (char *)calloc(1, 8);
+    strcpy(s, fn);
+    fl_file = (char *)calloc(1, strlen(bf) + strlen(s) + 2);
+    strcpy(fl_file, bf);
+    strcpy(fl_file + strlen(bf), "/");
+    strcpy(fl_file + strlen(bf) + 1, s);
+    free(fn);
+
+
+
 
     seg_size = bks_per_seg * bk_size;
     seg_num = sec_num / bk_size / bks_per_seg;

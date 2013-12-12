@@ -381,7 +381,7 @@ int Log_Create()
     //根据用户输入参数创建flash memory
     //-------------------------------------------    
     //create flash file
-    Flash_Create(fl_file, wearlimit, sec_num / FLASH_SECTORS_PER_BLOCK);
+    int fc = Flash_Create(fl_file, wearlimit, sec_num / FLASH_SECTORS_PER_BLOCK);
 
    
     //----------------- super  seg      ----------------------------
