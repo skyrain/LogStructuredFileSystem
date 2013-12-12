@@ -129,7 +129,10 @@ void get_checkpoint_to_memory()
         void * tmp_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
         u_int sec_offset = cp_addr_walker->log_addr.seg_no * bks_per_seg * bk_size;
         Flash_Read(flash, sec_offset, seg_size, tmp_buffer);
-        memcpy(buffer + buffer_offset, tmp_buffer + bk_size * FLASH_SECTOR_SIZE, 
+Inode *itest = (Inode *)(tmp_buffer + sizeof(Checkpoint) + 1024);        
+
+
+memcpy(buffer + buffer_offset, tmp_buffer + bk_size * FLASH_SECTOR_SIZE, 
                (seg_size - bk_size) * FLASH_SECTOR_SIZE);
         buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;
         free(tmp_buffer);
@@ -322,20 +325,20 @@ void store_checkpoint()
 
 //--- check before the erased action --
         void * be_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        Flash_Read(flash, sec_offset - bk_size, seg_size, be_buffer);
-	Inode * i1 = (Inode *)(be_buffer);
+        int be = Flash_Read(flash, sec_offset - bk_size, seg_size, be_buffer);
+	Inode * i1 = (Inode *)(be_buffer + sizeof(Checkpoint) + 1024);
 
-        Flash_Erase(flash, offset, erase_bks);
+        int fe = Flash_Erase(flash, offset, erase_bks);
 //--------- check the erased result ----------------
         void * fe_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        Flash_Read(flash, sec_offset - bk_size, seg_size, fe_buffer);
-	Inode * i2 = (Inode *)(fe_buffer);
+        int fe_r = Flash_Read(flash, sec_offset - bk_size, seg_size, fe_buffer);
+	Inode * i2 = (Inode *)(fe_buffer + sizeof(Checkpoint) + 1024);
 
-        Flash_Write(flash, sec_offset, seg_size - bk_size, buffer + buffer_offset);
+        int f2 = Flash_Write(flash, sec_offset, seg_size - bk_size, buffer + buffer_offset);
 //---- check the written result ----------------
         void * fr_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
-        Flash_Read(flash, sec_offset - bk_size, seg_size, fr_buffer);
-	Inode * i3 = (Inode *)(fr_buffer);
+        int fr = Flash_Read(flash, sec_offset - bk_size, seg_size, fr_buffer);
+	Inode * i3 = (Inode *)(fr_buffer + sizeof(Checkpoint) + 1024);
 
 
 
@@ -346,6 +349,10 @@ void store_checkpoint()
         cp_addr_walker = cp_addr_walker->next;       
     }
     Flash_Close(flash);
+
+//--- for test ------
+get_checkpoint_to_memory();
+
 }
 
 
