@@ -748,13 +748,47 @@ int Dir_Delete_File(const char *path)
 	Inode *fileNode, *dirNode;
 	char filename[FILE_NAME_LENGTH];
 	int status;
+	int numfiles;
+	int i;
 
 	status = Get_Inode(path, &fileNode);
 	if(status) { return status;}	
 	status = Get_Dir_Inode(path, &dirNode, filename);
 	if(status) { return status;}
 	
+	DirEntry *dir = Get_Dir(dirNode, &numfiles);
+	if(dir == NULL) { printf("No dir entry here \n"); return -ENOENT;}
 	// only delete the file from the LFS
+        
+	if S_ISDIR(fileNode->mode)
+	{
+		printf("delete a dir \n");
+		if(fileNode->filesize > 0)
+		{
+			printf("The directort is not empty!!\n");
+			return -ENOTEMPTY;
+		}
+	}
+
+	i = 0;
+	while (i < numfiles && strcmp(dir[i].filename, filename)!= 0){ i++; }
+
+	if(i < numfiles && dir[i].inum >= 0 && dir[i].inum < ifile_length)
+	{
+		while(i < numfiles -1)
+		{
+			dir[i]=dir[i+1];
+			i++;
+		}
+
+		dirNode->filesize =(numfiles -1)*sizeof(DirEntry);
+		status = Write_file(dirNode, (const char *)dir, dirNode->filesize, 0);
+		if(status != dirNode->filesize)
+		{
+			printf("Error in delete write_file\n");
+		}
+	}
+
 	if(fileNode->num_links == 1 )
 	{
 		status = File_Free(fileNode);

@@ -310,6 +310,10 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 
 		// write to the flash
 		memcpy(writePointer, writeBuffer + BlockSize_byte*writeBlock, BlockSize_byte);
+
+		if (fileBlockNumber > DIRECT_BK_NUM)
+		{ fileBlockNumber = INDIRECT_BK_NUM; }
+
 		status  = Log_Write(Ino->ino, fileBlockNumber, BlockSize_byte, writePointer, tailaddr);
 		if(status)
 		{
@@ -326,6 +330,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		*/
 	}
 	// if w read write to indirect block need to clean up
+	free(blockBuffer);
+	/*
 	if (blockBuffer != NULL)
 	{
 		if(Ino->indirect_bk.seg_no != FREE_BLOCK_NUM)
@@ -336,6 +342,8 @@ int File_Write(Inode *Ino, int offset, int length, void *buffer)
 		if(status){ return status; }
 		free(blockBuffer);
 	}
+	*/
+
 	//update inode, File layer tought we  write something on the disk, so it should update
 	// the disk locations into inode ---???---
 	if(length + offset > Ino->filesize)
@@ -510,7 +518,8 @@ int File_Truncate(Inode *myNode, off_t offset)
 
 void File_Layer_Destroy()
 {
-	Log_Destory();
+    ;
+//	Log_Destroy();
 }
 
 // Init the file layer, ready to read and write the file from the info 
@@ -528,6 +537,7 @@ int File_Layer_Init(char *filename, Inode *ifile, u_int cachesize)
 //get one of the four direct block from the Inode. and cpy to the Block_pointer.
 void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 {
+	int status;
 	// beyond the current file
 	if((BlockNumber * BLOCK_SIZE) > Ino->filesize)
 	{
@@ -535,7 +545,11 @@ void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
 		bp->bk_no = FREE_BLOCK_NUM;
 	}
 
-	if(BlockNumber < DIRECT_BK_NUM)
+	if(BlockNumber == INDIRECT_BK_NUM)
+	{
+		memcpy(bp, &Ino->indirect_bk, sizeof(Block_pointer));
+	}
+	else if(BlockNumber < DIRECT_BK_NUM)
 	{ 
 		memcpy(bp, Ino->direct_bk + BlockNumber, sizeof(Block_pointer));
         //Block_pointer * test;
@@ -548,12 +562,29 @@ void Get_Block_pointer(Inode *Ino, int BlockNumber, Block_pointer *bp)
    	}
 	else
 	{
-		printf("BlockNumber out of DIRECT_BK_NUM\n");
+		//printf("BlockNumber out of DIRECT_BK_NUM\n");
+		//return;
+		
+		// Read indirect block 
+		Block_pointer *blockBuffer = (Block_pointer *)calloc(1, BLOCK_SIZE);
+		LogAddress *addr;
+		addr->seg_no = Ino->indirect_bk.seg_no;
+		addr->bk_no = Ino->indirect_bk.bk_no;
+		status = Log_Read( addr, BLOCK_SIZE, blockBuffer);
+
+		if(status)
+		{
+			printf("error in read indirect pointer \n");
+		}
+
+		memcpy(bp, blockBuffer + (BlockNumber - DIRECT_BK_NUM), sizeof(Block_pointer));
+		free(blockBuffer);
+
 		return;
 	}
 }
 
-
+// doesn't need it any more, because the we onlt will check the live block when do the cleaning.
 int Decrement_Seg_Usage( int segment, int block)
 {
         // if the segment is at tail of the log, then set the corresponding block
