@@ -468,7 +468,7 @@ int Dir_Read_Dir(const char *path, void *buf, fuse_fill_dir_t filler,
 	}
 	DirEntry *dir  = Get_Dir(dirNode, &numfiles);
 
-	printf("Number of files in directory: %i\n", numfiles-2);
+	printf("Number of files in directory: %i\n", numfiles-1);
 
 	struct stat *stbuf;
 	stbuf = (struct stat *) malloc(sizeof(struct stat));
@@ -787,20 +787,26 @@ int Dir_Delete_File(const char *path)
 		{
 			printf("Error in delete write_file\n");
 		}
-	}
+	
 
-	if(fileNode->num_links == 1 )
-	{
-		status = File_Free(fileNode);
-		if(status) { printf(" error when use file free in dir delete\n"); return status;}
+		if(fileNode->num_links == 1 )
+		{
+			status = File_Free(fileNode);
+			if(status) { printf(" error when use file free in dir delete\n"); return status;}
+
+		}
+		else
+		{
+			fileNode->num_links --;
+			printf("numlinks of file %d is %d \n", fileNode->ino, fileNode->num_links);
+		}
 
 	}
 	else
 	{
-		printf("error in dir delete file \n");
+		printf("error! \n");
 		return -ENOENT;
 	}
-
 	return 0;
 }
 
