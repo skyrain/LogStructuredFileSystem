@@ -1686,22 +1686,23 @@ int Log_Init(char * filename, Inode * iifile, u_int cachesize)
 
 void Log_Destroy()
 {
+	Flash_Flags flags = FLASH_SILENT;
+
+	//blocks : # of blocks in the flash
+	u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+	u_int * blocks = &tmp;
+	Flash   flash = Flash_Open(fl_file, flags, blocks);
+	//--- 1st erase, 2nd write ot flash-----------
+	u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+	u_int offset = erase_bks * tail_log_addr->seg_no;
+	int fe = Flash_Erase(flash, offset, erase_bks);
+
+	//flash = Flash_Open(fl_file, flags, blocks);
+	int fw = Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
+			seg_size, seg_in_memory);
+	Flash_Close(flash);
+
 	store_checkpoint();
-		Flash_Flags flags = FLASH_SILENT;
-
-		//blocks : # of blocks in the flash
-		u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
-		u_int * blocks = &tmp;
-		Flash   flash = Flash_Open(fl_file, flags, blocks);
-		//--- 1st erase, 2nd write ot flash-----------
-		u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
-		u_int offset = erase_bks * tail_log_addr->seg_no;
-		int fe = Flash_Erase(flash, offset, erase_bks);
-
-		//flash = Flash_Open(fl_file, flags, blocks);
-		int fw = Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
-				seg_size, seg_in_memory);
-		Flash_Close(flash);
 
 }
 

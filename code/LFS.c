@@ -446,6 +446,17 @@ int main(int argc, char *argv[])
     tail_log_addr->bk_no = checkpoint->last_log_addr->bk_no;
 
     inode_ifile = checkpoint->ifile;
+//-- test inode_ifile -------
+    void * bf = calloc(1, bk_size * FLASH_SECTOR_SIZE);
+    tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+     * blocks = &tmp;
+    Flash   flash = Flash_Open(fl_file, flags, blocks);
+    Flash_Read(flash, inode_ifile->direct_bk[0].seg_no * seg_size +
+inode_ifile->direct_bk[0].bk_no * bk_size, bk_size, bf);
+    
+
+
+
 
     seg_in_memory = get_log_to_memory(tail_log_addr);
     //-------------------------------------------------------------
