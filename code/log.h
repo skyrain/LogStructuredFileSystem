@@ -327,5 +327,5 @@ bool is_bk_in_use(LogAddress * log_addr);
 bool is_remain_seg_not_usable(LogAddress * log_addr);
 void locate_tail_log_addr_bk(LogAddress * log_addr);
 
-
+void Log_Destroy();
 #endif
