@@ -54,7 +54,7 @@ bool is_in_wearlimit(LogAddress * log_addr)
     Flash_Close(flash);
 
     bool return_value = true;
-    if(*wear > wearlimit)
+    if(*wear > super_seg->wearlimit)
         return_value = false;
 
     free(wear);
@@ -101,7 +101,8 @@ bool need_change_cp_loc()
             }
         }
     }
-    free(tmp_log_addr);
+    if(!return_value)
+	    free(tmp_log_addr);
 
     return return_value;
 }
@@ -240,6 +241,9 @@ void get_cp_loc()
 //--- do not need to update seg usage table storing cp---
 void store_checkpoint()
 {
+    checkpoint->last_log_addr->seg_no = tail_log_addr->seg_no;
+    checkpoint->last_log_addr->bk_no = tail_log_addr->bk_no;
+    
     //-- update timestamp ---
     time_t t;
     time(&t);
@@ -311,10 +315,34 @@ void store_checkpoint()
         sec_offset = sec_offset * seg_size;
         //-- start write from 1st bk not 0th bk ---
         sec_offset = sec_offset + bk_size;
-        //---1. fill the seg with relative part of checkpoint------       
+            
+       //---1. fill the seg with relative part of checkpoint------       
+        u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+        u_int offset = erase_bks * cp_addr_walker->log_addr.seg_no;
+
+//--- check before the erased action --
+        void * be_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+        Flash_Read(flash, sec_offset - bk_size, seg_size, be_buffer);
+	Inode * i1 = (Inode *)(be_buffer);
+
+        Flash_Erase(flash, offset, erase_bks);
+//--------- check the erased result ----------------
+        void * fe_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+        Flash_Read(flash, sec_offset - bk_size, seg_size, fe_buffer);
+	Inode * i2 = (Inode *)(fe_buffer);
+
         Flash_Write(flash, sec_offset, seg_size - bk_size, buffer + buffer_offset);
-        buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;  
-       
+//---- check the written result ----------------
+        void * fr_buffer = calloc(1, seg_size * FLASH_SECTOR_SIZE);
+        Flash_Read(flash, sec_offset - bk_size, seg_size, fr_buffer);
+	Inode * i3 = (Inode *)(fr_buffer);
+
+
+
+
+	buffer_offset += (seg_size - bk_size) * FLASH_SECTOR_SIZE;  
+
+   
         cp_addr_walker = cp_addr_walker->next;       
     }
     Flash_Close(flash);
@@ -1650,7 +1678,7 @@ int Log_Init(char * filename, Inode * iifile, u_int cachesize)
     return 0;
 }
 
-void Log_Destory()
+void Log_Destroy()
 {
 	store_checkpoint();
 }

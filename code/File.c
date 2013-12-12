@@ -518,8 +518,7 @@ int File_Truncate(Inode *myNode, off_t offset)
 
 void File_Layer_Destroy()
 {
-    ;
-//	Log_Destroy();
+	Log_Destroy();
 }
 
 // Init the file layer, ready to read and write the file from the info 
