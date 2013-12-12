@@ -351,7 +351,7 @@ void store_checkpoint()
     Flash_Close(flash);
 
 //--- for test ------
-get_checkpoint_to_memory();
+//get_checkpoint_to_memory();
 
 }
 
@@ -1319,11 +1319,12 @@ void pushToDisk(LogAddress * log_addr)
 		//--- 1st erase, 2nd write ot flash-----------
 		u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
 		u_int offset = erase_bks * tail_log_addr->seg_no;
-		Flash_Erase(flash, offset, erase_bks);
-		Flash_Close(flash);
-		flash = Flash_Open(fl_file, flags, blocks);
-		Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
+		int fe = Flash_Erase(flash, offset, erase_bks);
+
+		//flash = Flash_Open(fl_file, flags, blocks);
+		int fw = Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
 				seg_size, seg_in_memory);
+		Flash_Close(flash);
 		available_seg_num--;
 		Begin_bk * tmp_begin_bk = (Begin_bk *)(seg_in_memory + sizeof(Seg));
 		printf("-seg_in_memory seg_no--%d", tmp_begin_bk->seg_no);
@@ -1344,8 +1345,6 @@ void pushToDisk(LogAddress * log_addr)
 		//----------怎麽确定 num_live_bk ???----------------
 		//--- 感觉要结合 seg_sum_entry 的file bk和inode 得到真实的num_live_bk-
 		//        sut_walker->num_live_bk = bks_per_seg;
-		Flash_Close(flash);
-
 		//--- for cache seg initialization--------------
 		if(written_seg_num != cache_seg_num)
 		{
@@ -1688,5 +1687,21 @@ int Log_Init(char * filename, Inode * iifile, u_int cachesize)
 void Log_Destroy()
 {
 	store_checkpoint();
+		Flash_Flags flags = FLASH_SILENT;
+
+		//blocks : # of blocks in the flash
+		u_int tmp = sec_num / FLASH_SECTORS_PER_BLOCK;
+		u_int * blocks = &tmp;
+		Flash   flash = Flash_Open(fl_file, flags, blocks);
+		//--- 1st erase, 2nd write ot flash-----------
+		u_int erase_bks = seg_size / FLASH_SECTORS_PER_BLOCK;
+		u_int offset = erase_bks * tail_log_addr->seg_no;
+		int fe = Flash_Erase(flash, offset, erase_bks);
+
+		//flash = Flash_Open(fl_file, flags, blocks);
+		int fw = Flash_Write(flash, tail_log_addr->seg_no * seg_size, 
+				seg_size, seg_in_memory);
+		Flash_Close(flash);
+
 }
 
