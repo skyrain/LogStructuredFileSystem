@@ -1,9 +1,0 @@
-Before coding: 
-
-1.We are not quite Familiar with implementing a file system, it take us two weeks to read some reference and map the module of each part of the file system.
-
-2.We successfully start the hello.c and figure out the source code and the flash c/h file about how they are working once we got the code.
-
-Begin coding:
-
-1. we Start with the log.h file, define the segment, block .... As well as their size and other storage units of the log structure file system. 

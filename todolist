@@ -1,2 +1,0 @@
-1.File_Free() 中memset(Ino, 0, sizeof(Inode));未实际删除改item，仍然
-占据空间，应覆盖。
