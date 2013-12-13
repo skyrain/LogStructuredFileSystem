@@ -27,3 +27,4 @@ Note: fuse version 26
 Thus,after write a large amount of info, the lfs would down for 
 segment fault, since it starts the cleaning mechanism.
 2. lfsck(): exist bugs.
+3. cache: is not in use since certain bug exist
