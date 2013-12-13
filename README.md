@@ -20,6 +20,8 @@ CSC552
 4.construct the file system: ./LFS flashname dirname
 5.Use the lfs 
 
+Note: fuse version 26
+
 //--- bug ----------------
 1.clean_seg(): cleaning mechanism has some bugs need to solved 
 Thus,after write a large amount of info, the lfs would down for 
