@@ -21,6 +21,7 @@ CSC552
 5.Use the lfs 
 
 //--- bug ----------------
-clean_seg(): cleaning mechanism has some bugs need to solved 
+1.clean_seg(): cleaning mechanism has some bugs need to solved 
 Thus,after write a large amount of info, the lfs would down for 
 segment fault, since it starts the cleaning mechanism.
+2. lfsck(): exist bugs.
