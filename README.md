@@ -2,13 +2,9 @@ lfs
 ===
 
 Authors: 
-Computer Science Department in University of Arizona
-
 Tianyu Qiu: tianyuq@email.arizona.edu
 Xudong Weng:weng@email.arizona.edu
 
-
-CSC552
 
 //-- Log-structured file system on flash memory ---------
 //------------------------------------------------------
